@@ -1,7 +1,9 @@
 Denyut assistant
 
-Denyut's own code is licensed under the Mozilla Public License 2.0
-(see LICENSE) - the same license as the DeltaChat core it builds on.
+Denyut's own code is licensed under the MIT License (see LICENSE).
+The third-party components below remain under their own licenses; the
+MPL-2.0 obligations (notices and corresponding source, sections 3.1-3.2)
+apply to those components.
 
 This project bundles or depends on third-party open-source components:
 

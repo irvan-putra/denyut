@@ -66,4 +66,4 @@ need a configured model backend.
 
 ## License
 
-MPL-2.0 (see LICENSE) - the same license as the DeltaChat core it builds on. Third-party components and their licenses: NOTICE.
+Denyut's own code is MIT (see LICENSE). The bundled DeltaChat core stays MPL-2.0 - its notices and corresponding-source links live in NOTICE.
