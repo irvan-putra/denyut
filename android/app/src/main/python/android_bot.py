@@ -194,8 +194,13 @@ def _reminder_loop(assistant, rpc):
                     if chat_id:
                         rpc.send_msg(accid, chat_id,
                                      MessageData(text="Reminder: " + text))
-        except Exception:
-            logger.exception("reminder loop")
+        except Exception as e:
+            # Sanitized diagnostics: no repr/traceback here. rpc error
+            # strings can embed account, chat or contact identifiers,
+            # and logcat is read into CI logs. The exception type name
+            # is enough to diagnose the failure class.
+            print("denyut reminder loop error: %s" % type(e).__name__,
+                  flush=True)
 
 
 def serve(accounts_dir, store_dir, rpc_server=None):
