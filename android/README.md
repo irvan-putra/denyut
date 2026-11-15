@@ -46,8 +46,8 @@ the DeltaChat stack resolved from PyPI's official Android wheels
   chaquo.com/chaquopy/license/, checked 2026-11-15); distributed via
   Maven Central. We use 17.2.0 from mavenCentral().
 - DeltaChat core is MPL-2.0; deltabot-cli/deltachat2/deltachat-rpc-client
-  are published by the Delta Chat project. Intuisi's own code is MIT
-  (see ../LICENSE).
+  are published by the Delta Chat project. Intuisi's own code is MPL-2.0
+  (see ../LICENSE), the same license as the DeltaChat core.
 
 ## Build
 

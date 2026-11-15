@@ -66,4 +66,4 @@ need a configured model backend.
 
 ## License
 
-MIT (see LICENSE). DeltaChat core itself is MPL-2.0 (see NOTICE).
+MPL-2.0 (see LICENSE) - the same license as the DeltaChat core it builds on. Third-party components and their licenses: NOTICE.

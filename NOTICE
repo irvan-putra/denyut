@@ -1,5 +1,8 @@
 Intuisi assistant
 
+Intuisi's own code is licensed under the Mozilla Public License 2.0
+(see LICENSE) - the same license as the DeltaChat core it builds on.
+
 This project bundles or depends on third-party open-source components:
 
 - deltachat-rpc-server (bundled binary, arm64-v8a, version 2.58.0):
