@@ -68,6 +68,36 @@ def find_server_executable(provided=None):
     return exe
 
 
+def _configure_account(rpc, relay_url, display_name):
+    """Create and configure a bot account on a LIVE rpc transport.
+
+    Shared by setup_account (UI path, own transport) and ci_autosetup
+    (CI path, the running serve transport). Returns (ok, accid).
+    """
+    accid = rpc.add_account()
+    rpc.set_config(accid, "bot", "1")
+    rpc.set_config(accid, "displayname", display_name)
+    done = threading.Event()
+    ok = threading.Event()
+
+    def watch():
+        while not done.is_set():
+            event = rpc.get_next_event().event
+            progress = getattr(event, "progress", None)
+            if progress is not None:
+                if progress >= 1000:
+                    ok.set()
+                    done.set()
+                elif progress == 0:
+                    done.set()  # failure
+
+    watcher = threading.Thread(target=watch, daemon=True)
+    watcher.start()
+    rpc.add_transport_from_qr(accid, "DCACCOUNT:" + relay_url)
+    done.wait(timeout=180)
+    return ok.is_set(), accid
+
+
 def setup_account(accounts_dir, rpc_server=None, relay_url=DEFAULT_RELAY, display_name="Denyut"):
     """One-time: create a chatmail account for the bot.
 
@@ -81,33 +111,46 @@ def setup_account(accounts_dir, rpc_server=None, relay_url=DEFAULT_RELAY, displa
     _set("setup", "creating account via " + relay_url)
     with IOTransport(accounts_dir=accounts_dir,
                      rpc_executable=find_server_executable(rpc_server)) as trans:
-        rpc = Rpc(trans)
-        accid = rpc.add_account()
-        rpc.set_config(accid, "bot", "1")
-        rpc.set_config(accid, "displayname", display_name)
-        done = threading.Event()
-        ok = threading.Event()
-
-        def watch():
-            while not done.is_set():
-                event = rpc.get_next_event().event
-                progress = getattr(event, "progress", None)
-                if progress is not None:
-                    if progress >= 1000:
-                        ok.set()
-                        done.set()
-                    elif progress == 0:
-                        done.set()  # failure
-
-        watcher = threading.Thread(target=watch, daemon=True)
-        watcher.start()
-        rpc.add_transport_from_qr(accid, "DCACCOUNT:" + relay_url)
-        done.wait(timeout=120)
-    if ok.is_set():
+        ok, _accid = _configure_account(Rpc(trans), relay_url, display_name)
+    if ok:
         _set("stopped", "account ready")
         return True
     _set("setup_failed", "configuration did not complete")
     return False
+
+
+def ci_autosetup(relay_url=DEFAULT_RELAY, display_name="Denyut CI"):
+    """DEBUG-build CI hook: configure an account on the RUNNING serve()
+    transport and print the bot's securejoin invite to logcat.
+
+    Uses the live rpc from _rpc_holder: a second rpc-server process on
+    the same accounts dir would fight over its locks. Reached only via
+    MainActivity's BuildConfig.DEBUG-gated autosetup_bot intent extra.
+    """
+    rpc = None
+    for _ in range(90):
+        rpc = _rpc_holder.get("rpc")
+        if rpc is not None:
+            break
+        if _stop.wait(1):
+            return
+    if rpc is None:
+        print("denyut setup: failed no running rpc", flush=True)
+        return
+    try:
+        ok, accid = _configure_account(rpc, relay_url, display_name)
+    except Exception as e:
+        print("denyut setup: failed %r" % (e,), flush=True)
+        return
+    if not ok:
+        print("denyut setup: failed configuration did not complete", flush=True)
+        return
+    print("denyut setup: account ready", flush=True)
+    try:
+        qr = rpc.get_chat_securejoin_qr_code(accid, None)
+        print("denyut invite: %s" % qr, flush=True)
+    except Exception as e:
+        print("denyut invite: failed %r" % (e,), flush=True)
 
 
 def invite_link(accounts_dir, rpc_server=None):

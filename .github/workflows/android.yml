@@ -1,6 +1,11 @@
 name: android-apk
 on:
   workflow_dispatch:
+    inputs:
+      chat_test:
+        description: 'Run the relay setup + /echo round trip (creates exactly two throwaway nine.testrun.org accounts; user-approved scope, confirm before each dispatch)'
+        type: boolean
+        default: false
   push:
     branches: [main]
 
@@ -50,6 +55,12 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Run smoke test on emulator
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          # Push-triggered runs never create relay accounts: the chat
+          # round trip (2 throwaway accounts) runs only on an explicit
+          # dispatch with chat_test=true, keeping account creation tied
+          # to a deliberate, user-scoped action.
+          RUN_CHAT_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.chat_test }}
         with:
           api-level: 34
           arch: x86_64
@@ -63,4 +74,7 @@ jobs:
           # loops/conditionals cannot live here - the smoke logic is in
           # tools/ci-smoke.sh. Green requires BOTH the post-JSON-RPC
           # status marker in logcat AND a live rpc-server process.
-          script: sh tools/ci-smoke.sh
+          # ci-setup-chat.sh then drives the DEBUG-only autosetup hook:
+          # a throwaway relay account, securejoin invite, and an /echo
+          # round trip from a second throwaway account on the runner.
+          script: sh tools/ci-smoke.sh && sh tools/ci-setup-chat.sh

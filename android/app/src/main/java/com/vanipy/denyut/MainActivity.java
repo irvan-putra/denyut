@@ -64,6 +64,22 @@ public class MainActivity extends Activity {
                 startService(intent);
             }
         }
+        // Same DEBUG-only gate: --ez autosetup_bot true asks the running
+        // bot to configure a throwaway relay account and print its
+        // securejoin invite to logcat, so CI can drive a real setup +
+        // chat round trip. Ignored by release builds like autostart_bot.
+        if (BuildConfig.DEBUG && getIntent().getBooleanExtra("autosetup_bot", false)) {
+            new Thread(() -> {
+                try {
+                    for (int i = 0; i < 90 && !Python.isStarted(); i++) {
+                        Thread.sleep(1000);
+                    }
+                    Python.getInstance().getModule("android_bot")
+                            .callAttr("ci_autosetup");
+                } catch (Exception ignored) {
+                }
+            }).start();
+        }
         selftestBtn.setOnClickListener(v -> statusView.setText(
                 Python.getInstance().getModule("bootstrap")
                         .callAttr("selftest").toString()));
