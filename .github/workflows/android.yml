@@ -66,16 +66,23 @@ jobs:
             sleep 20
             adb shell am start-foreground-service -n com.intuisi.assistant/.BotService \
               || adb shell am startservice -n com.intuisi.assistant/.BotService
-            # Poll logcat until the bot reports a terminal-ish state.
+            # Poll logcat until the bot reports a state. serve() sets
+            # "waiting_setup"/"running" only AFTER rpc.get_all_account_ids()
+            # returns, i.e. after a real JSON-RPC round trip to the spawned
+            # deltachat-rpc-server process - so the marker itself is proof
+            # the binary exec'd and answered under translation.
             for i in $(seq 1 12); do
               sleep 10
               adb logcat -d > smoke.log || true
-              if grep -q "intuisi status:" smoke.log; then break; fi
+              if grep -q "intuisi status: waiting_setup\|intuisi status: running\|intuisi status: error" smoke.log; then break; fi
             done
             echo "===== filtered logcat ====="
             grep -i "intuisi\|python\|chaquo\|AndroidRuntime" smoke.log || true
+            # Process check runs ps remotely and greps LOCALLY, so the grep
+            # itself can never self-match the device process list.
+            adb shell "ps -A" > ps.txt || true
             echo "===== rpc-server process check ====="
-            adb shell "ps -A | grep -i rpcserver" || echo "no rpcserver process visible"
+            grep -i "rpcserver" ps.txt || echo "no rpcserver process visible"
             # Failure signals first.
             if grep -q "intuisi status: error" smoke.log; then
               echo "SMOKE FAIL: bot service reported error"; exit 1
@@ -83,11 +90,11 @@ jobs:
             if grep -q "rpc-server missing\|not executable\|AndroidRuntime.*FATAL" smoke.log; then
               echo "SMOKE FAIL: rpc-server exec problem"; exit 1
             fi
-            # Success: serve() reached the account check, which means the
-            # rpc-server process spawned and answered JSON-RPC under
-            # translation.
-            if grep -q "intuisi status: waiting_setup\|intuisi status: running" smoke.log; then
-              echo "SMOKE PASS: rpc-server exec + Python service up under translation"
+            # Green requires BOTH: the post-round-trip status marker AND a
+            # live rpc-server process on the device.
+            if grep -q "intuisi status: waiting_setup\|intuisi status: running" smoke.log \
+              && grep -qi "rpcserver" ps.txt; then
+              echo "SMOKE PASS: rpc-server exec + live process + JSON-RPC round trip under translation"
             else
-              echo "SMOKE FAIL: no bot status reached in 120s"; exit 1
+              echo "SMOKE FAIL: missing status marker or live rpc-server process"; exit 1
             fi
