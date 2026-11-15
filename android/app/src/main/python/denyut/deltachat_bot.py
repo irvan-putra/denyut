@@ -25,13 +25,27 @@ from .core import Assistant
 
 cli = BotCli("denyut")
 _assistant = None
+_config_dir = None
 REMINDER_POLL_SECONDS = 30
+
+
+@cli.on_init
+def _capture_config_dir(_bot, args):
+    # BotCli keeps config_dir on the parsed args, not on itself; capture it
+    # before serving so get_assistant() never touches cli.config_dir
+    # (AttributeError on the first incoming message).
+    global _config_dir
+    _config_dir = getattr(args, "config_dir", None)
 
 
 def get_assistant():
     global _assistant
     if _assistant is None:
-        _assistant = Assistant(store_dir=cli.config_dir)
+        store_dir = _config_dir
+        if not store_dir:
+            from appdirs import user_config_dir
+            store_dir = user_config_dir("denyut")
+        _assistant = Assistant(store_dir=store_dir)
     return _assistant
 
 
