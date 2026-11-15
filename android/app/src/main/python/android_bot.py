@@ -54,7 +54,17 @@ def find_server_executable(provided=None):
         import deltachat_rpc_server
         exe = os.path.join(os.path.dirname(deltachat_rpc_server.__file__),
                            "deltachat-rpc-server")
-    os.chmod(exe, os.stat(exe).st_mode | stat.S_IXUSR)
+    mode = os.stat(exe).st_mode
+    if not mode & stat.S_IXUSR:
+        try:
+            os.chmod(exe, mode | stat.S_IXUSR)
+        except PermissionError:
+            # Android extracts native libs as apk_data_file: SELinux
+            # denies setattr there, but the system already installs
+            # them executable (CI run 43682543915). Only real when the
+            # file ends up non-executable.
+            if not os.access(exe, os.X_OK):
+                raise
     return exe
 
 
