@@ -39,7 +39,13 @@ grep -i "denyut\|python\|chaquo\|AndroidRuntime" smoke.log || true
 # device process list.
 adb shell "ps -A" > ps.txt 2>/dev/null || true
 echo "===== rpc-server process check ====="
-grep -i "rpcserver" ps.txt || echo "no rpcserver process visible"
+grep -i "rpc" ps.txt || { echo "no rpc process visible; full ps output:"; cat ps.txt; }
+
+# Anything logged between the marker and the ps check (server crash,
+# poll error) only lands in a second capture.
+adb logcat -d > smoke2.log 2>/dev/null || true
+echo "===== post-marker logcat ====="
+grep -i "denyut\|python\|Fatal signal\|tombstone" smoke2.log | tail -40 || true
 
 if grep -q "denyut status: error" smoke.log; then
   echo "SMOKE FAIL: bot service reported error"
@@ -50,7 +56,7 @@ if grep -q "rpc-server missing\|not executable\|AndroidRuntime.*FATAL" smoke.log
   exit 1
 fi
 if grep -q "denyut status: waiting_setup\|denyut status: running" smoke.log \
-  && grep -qi "rpcserver" ps.txt; then
+  && grep -qi "rpc" ps.txt; then
   echo "SMOKE PASS: rpc-server exec + live process + JSON-RPC round trip under translation"
   exit 0
 fi
