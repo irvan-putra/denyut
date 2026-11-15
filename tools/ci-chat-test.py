@@ -15,7 +15,7 @@ Written against deltachat2 2.58.0 API, verified from the wheel source:
 - events are EventType* dataclass instances on Event().event, not dicts
 - configure progress: EventTypeConfigureProgress(progress 1-999, 1000 done, 0 error)
 - joiner progress: EventTypeSecurejoinJoinerProgress(contact_id, progress; 1000 done)
-- incoming message: EventTypeIncomingMsg(chat_id, msg_id); body via rpc.get_message
+- incoming message: EventTypeIncomingMsg(chat_id, msg_id); body via raw get_message call
 - send via rpc.send_msg(accid, chat_id, MessageData(text=...))
 
 A single event loop consumes get_next_event() - parallel consumer
@@ -91,8 +91,12 @@ def main():
                     phase = "chat"
 
             elif phase == "chat" and isinstance(ev, EventTypeIncomingMsg):
-                msg = rpc.get_message(accid, ev.msg_id)
-                if token in (msg.text or ""):
+                # Raw call, not rpc.get_message(): the typed Message parse is
+                # version-fragile (deltachat2 2.58.0 expects sender.is_verified,
+                # which current deltachat-rpc-server does not return). The
+                # witness only needs the text.
+                msg = rpc.transport.call("get_message", accid, ev.msg_id)
+                if token in (msg.get("text") or ""):
                     print("CHAT PASS: /echo round trip through the bot's "
                           "real message path", flush=True)
                     return 0
