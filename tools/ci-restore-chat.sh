@@ -33,7 +33,7 @@ WORK=$(mktemp -d)
 chmod 700 "$WORK"
 cleanup() {
   rm -rf "$WORK"
-  adb shell run-as com.vanipy.denyut sh -c 'rm -rf /data/data/com.vanipy.denyut/files/accounts' 2>/dev/null || true
+  adb shell "run-as com.vanipy.denyut rm -rf /data/data/com.vanipy.denyut/files/accounts" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -70,11 +70,18 @@ adb logcat -c
 adb shell am force-stop com.vanipy.denyut
 
 # Push account A's dir contents into the app's private accounts dir.
-# run-as works because this is a debuggable build; the tar stream
-# avoids the /data/local/tmp permission wall between shell and app uid.
-tar czf - -C "$WORK/A" . | adb shell run-as com.vanipy.denyut sh -c \
-  'mkdir -p /data/data/com.vanipy.denyut/files/accounts && tar xzf - -C /data/data/com.vanipy.denyut/files/accounts'
-adb shell run-as com.vanipy.denyut ls /data/data/com.vanipy.denyut/files/accounts
+# run-as works because this is a debuggable build. Each remote command
+# is ONE adb-shell argument: adb joins its argv on the device, so a
+# nested sh -c 'a && b' arrives misquoted (run 43693783820: mkdir got
+# zero args, the account never landed, the bot stayed waiting_setup).
+adb shell "run-as com.vanipy.denyut mkdir -p /data/data/com.vanipy.denyut/files/accounts"
+tar cf - -C "$WORK/A" . | adb shell "run-as com.vanipy.denyut tar xf - -C /data/data/com.vanipy.denyut/files/accounts"
+LISTING=$(adb shell "run-as com.vanipy.denyut ls /data/data/com.vanipy.denyut/files/accounts")
+echo "$LISTING"
+if ! echo "$LISTING" | grep -Eq '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'; then
+  echo "SETUP FAIL: account dir did not reach the app's private storage"
+  exit 1
+fi
 
 adb shell am start -n com.vanipy.denyut/.MainActivity --ez autostart_bot true
 
