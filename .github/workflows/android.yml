@@ -25,6 +25,14 @@ jobs:
       # (android-35 platform + build-tools, licenses pre-accepted).
       # android-actions/setup-android@v3 currently fails on the runner's
       # cmdline-tools 16.0 sdkmanager license prompt.
+      - name: Offline witness qualification (no relay, no accounts)
+        # Fixture-drives tools/ci-chat-test.py through the real deltachat2
+        # parsers against the pinned client/server shapes on every push, so
+        # the message-parse contract is enforced before any dispatch can
+        # burn a relay account on it.
+        run: |
+          python3 -m pip install --quiet "deltachat2[full]==2.58.0" pytest
+          python3 -m pytest tests/test_ci_witness_offline.py -q
       - name: Build debug APK
         working-directory: android
         run: ./gradlew :app:assembleDebug --no-daemon

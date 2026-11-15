@@ -24,7 +24,13 @@ echo "===== host-side preflight (no accounts created) ====="
 # anything touches the relay: run 43687128731 burned the bot account
 # because an ImportError surfaced only after setup had succeeded. This
 # check creates no account and costs nothing.
-python3 -m pip install --quiet deltachat2 deltachat-rpc-server
+# PINNED matched pair: deltachat2 2.58.0's typed API mirrors chatmail
+# core 2.58 (coordinated same-day releases; deltachat2[full] itself pins
+# deltachat-rpc-server==2.58.0). Run 43688709457 proved unpinned installs
+# drift (client 2.58.0 + server 2.69.0 -> sender.is_verified missing,
+# witness crash). tests/test_ci_witness_offline.py guards the parse
+# contract offline; the witness also reads replies via the raw call.
+python3 -m pip install --quiet deltachat2==2.58.0 deltachat-rpc-server==2.58.0
 python3 - <<'PYEOF'
 from deltachat2 import MessageData, Rpc
 from deltachat2.transport import IOTransport

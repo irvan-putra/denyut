@@ -44,11 +44,16 @@ chaquopy {
         // one via actions/setup-python). To override locally:
         // buildPython("/path/to/python3.12")
         pip {
-            // deltabot-cli: high-level DeltaChat bot framework.
-            install("deltabot-cli")
+            // PINNED matched set (drift broke CI run 43688709457: client
+            // 2.58 vs server 2.69 dropped sender.is_verified). deltabot-cli
+            // 9.1.0 pulls deltachat2[full], whose "full" extra pins
+            // deltachat-rpc-server==2.58.0; all three are pinned so the
+            // resolution stays deterministic.
+            install("deltabot-cli==9.1.0")
+            install("deltachat2==2.58.0")
             // deltachat-rpc-server: PyPI hosts official Android wheels
             // (android_21_arm64_v8a) bundling the chatmail core binary.
-            install("deltachat-rpc-server")
+            install("deltachat-rpc-server==2.58.0")
         }
     }
 }
