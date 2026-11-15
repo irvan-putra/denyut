@@ -1,14 +1,24 @@
 """Host-side half of the Denyut CI chat round trip.
 
 Runs on the CI runner (Linux x86_64; deltachat2 + deltachat-rpc-server
-from PyPI), NOT on the emulator. Creates a second throwaway relay
-account, secure-joins the bot via the invite QR printed by
-android_bot.ci_autosetup, sends a token with /echo, and waits for the
-bot's reply through the real DeltaChat message path.
+from PyPI), NOT on the emulator. Two modes:
 
-Usage: python3 tools/ci-chat-test.py <relay_url> <invite_qr_file> <token>
+Create mode (legacy): creates a throwaway relay account, secure-joins
+the bot via an invite QR, sends a token with /echo, and waits for the
+bot's reply. Usage:
+    python3 tools/ci-chat-test.py <relay_url> <invite_qr_file> <token>
 The invite QR is read from a chmod-600 file so the credential never
 appears in argv, logs, or artifacts.
+
+Restore mode (current CI path): reopens an EXISTING account directory
+from the vault-backed reusable test pair (no account creation), sends
+the token over the already-established chat with the bot, and waits for
+the reply. Usage:
+    python3 tools/ci-chat-test.py - - <token> \\
+        --accounts-dir <dir> --peer-address <addr>
+The accounts dir and peer address arrive via protected CI secrets and
+temp files, never the public log.
+
 Prints "CHAT PASS" or "CHAT FAIL: <reason>" and exits 0/1.
 
 Written against deltachat2 2.58.0 API, verified from the wheel source:
@@ -17,6 +27,9 @@ Written against deltachat2 2.58.0 API, verified from the wheel source:
 - joiner progress: EventTypeSecurejoinJoinerProgress(contact_id, progress; 1000 done)
 - incoming message: EventTypeIncomingMsg(chat_id, msg_id); body via raw get_message call
 - send via rpc.send_msg(accid, chat_id, MessageData(text=...))
+- a restored accounts dir needs start_io_for_all_accounts() before
+  anything is sent or received (configure starts IO implicitly, restore
+  does not)
 
 A single event loop consumes get_next_event() - parallel consumer
 threads would steal each other's events from the shared queue.
@@ -32,9 +45,27 @@ TOTAL_TIMEOUT = 420
 
 
 def main():
-    relay_url, invite_file, token = sys.argv[1], sys.argv[2], sys.argv[3]
-    with open(invite_file, "r", encoding="utf-8") as f:
-        invite_qr = f.read().strip()
+    argv = sys.argv[1:]
+    restore_dir = None
+    peer_address = None
+    if "--accounts-dir" in argv:
+        i = argv.index("--accounts-dir")
+        restore_dir = argv[i + 1]
+        del argv[i:i + 2]
+    if "--peer-address" in argv:
+        i = argv.index("--peer-address")
+        peer_address = argv[i + 1]
+        del argv[i:i + 2]
+    relay_url, invite_file, token = argv[0], argv[1], argv[2]
+
+    if restore_dir and not peer_address:
+        print("CHAT FAIL: restore mode requires --peer-address", flush=True)
+        return 1
+
+    invite_qr = None
+    if not restore_dir:
+        with open(invite_file, "r", encoding="utf-8") as f:
+            invite_qr = f.read().strip()
 
     from deltachat2 import MessageData, Rpc
     from deltachat2.transport import IOTransport
@@ -53,14 +84,41 @@ def main():
 
     threading.Thread(target=watchdog, daemon=True).start()
 
-    accounts_dir = tempfile.mkdtemp(prefix="denyut-ci-chat-")
-    phase = "configure"
+    accounts_dir = restore_dir or tempfile.mkdtemp(prefix="denyut-ci-chat-")
+    phase = "restore" if restore_dir else "configure"
     chat_id = None
     with IOTransport(accounts_dir=accounts_dir) as trans:
         rpc = Rpc(trans)
-        accid = rpc.add_account()
-        rpc.set_config(accid, "displayname", "Denyut CI peer")
-        rpc.add_transport_from_qr(accid, "DCACCOUNT:" + relay_url)
+
+        if restore_dir:
+            ids = rpc.get_all_account_ids()
+            if len(ids) != 1:
+                print("CHAT FAIL: restored accounts dir holds %d accounts, "
+                      "expected exactly 1" % len(ids), flush=True)
+                return 1
+            accid = ids[0]
+            rpc.start_io_for_all_accounts()
+            # The pair's secure-join already created a verified key-contact
+            # and chat. create_contact() would mint a NEW address-contact
+            # whose 1:1 chat is unencrypted, and chatmail refuses to send
+            # unencrypted ("e2e encryption unavailable"); look the existing
+            # contact up instead so the token rides the established chat.
+            contact_id = rpc.lookup_contact_id_by_addr(accid, peer_address)
+            if not contact_id:
+                print("CHAT FAIL: no existing contact for peer address",
+                      flush=True)
+                return 1
+            chat_id = rpc.get_chat_id_by_contact_id(accid, contact_id)
+            if not chat_id:
+                chat_id = rpc.create_chat_by_contact_id(accid, contact_id)
+            rpc.send_msg(accid, chat_id, MessageData(text="/echo " + token))
+            print("restored peer account, sent /echo with token, "
+                  "awaiting reply", flush=True)
+            phase = "chat"
+        else:
+            accid = rpc.add_account()
+            rpc.set_config(accid, "displayname", "Denyut CI peer")
+            rpc.add_transport_from_qr(accid, "DCACCOUNT:" + relay_url)
 
         deadline = time.time() + TOTAL_TIMEOUT
         while time.time() < deadline:

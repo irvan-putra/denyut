@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       chat_test:
-        description: 'Run the relay setup + /echo round trip (creates exactly two throwaway nine.testrun.org accounts; user-approved scope, confirm before each dispatch)'
+        description: 'Run the on-device /echo round trip with the vault-backed reusable test pair restored from protected environment secrets (creates NO relay accounts)'
         type: boolean
         default: false
   push:
@@ -63,12 +63,6 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Run smoke test on emulator
         uses: reactivecircus/android-emulator-runner@v2
-        env:
-          # Push-triggered runs never create relay accounts: the chat
-          # round trip (2 throwaway accounts) runs only on an explicit
-          # dispatch with chat_test=true, keeping account creation tied
-          # to a deliberate, user-scoped action.
-          RUN_CHAT_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.chat_test }}
         with:
           api-level: 34
           arch: x86_64
@@ -82,7 +76,40 @@ jobs:
           # loops/conditionals cannot live here - the smoke logic is in
           # tools/ci-smoke.sh. Green requires BOTH the post-JSON-RPC
           # status marker in logcat AND a live rpc-server process.
-          # ci-setup-chat.sh then drives the DEBUG-only autosetup hook:
-          # a throwaway relay account, securejoin invite, and an /echo
-          # round trip from a second throwaway account on the runner.
-          script: sh tools/ci-smoke.sh && sh tools/ci-setup-chat.sh
+          script: sh tools/ci-smoke.sh
+
+  chat-test:
+    # The on-device /echo round trip with the reusable test pair. Runs
+    # ONLY on explicit dispatch; the pair arrives through secrets scoped
+    # to the denyut-chat-test environment, which this job alone declares,
+    # so no push-triggered job can ever see them. Restores accounts,
+    # never creates them; the secrets are removed after the run.
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.chat_test == true
+    environment: denyut-chat-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: denyut-v0.6.4-debug-apk
+          path: apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run smoke + restored-account chat round trip
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          DENYUT_BACKUP_B64_1: ${{ secrets.DENYUT_BACKUP_B64_1 }}
+          DENYUT_BACKUP_B64_2: ${{ secrets.DENYUT_BACKUP_B64_2 }}
+          DENYUT_BACKUP_B64_3: ${{ secrets.DENYUT_BACKUP_B64_3 }}
+          DENYUT_BACKUP_B64_4: ${{ secrets.DENYUT_BACKUP_B64_4 }}
+          DENYUT_PEER_ADDRESS: ${{ secrets.DENYUT_PEER_ADDRESS }}
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          script: sh tools/ci-smoke.sh && sh tools/ci-restore-chat.sh
