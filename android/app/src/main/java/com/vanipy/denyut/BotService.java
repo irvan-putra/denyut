@@ -1,4 +1,4 @@
-package com.denyut.assistant;
+package com.vanipy.denyut;
 
 import android.app.Notification;
 import android.app.NotificationChannel;

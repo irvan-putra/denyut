@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.denyut.assistant"
+    namespace = "com.vanipy.denyut"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.denyut.assistant"
+        applicationId = "com.vanipy.denyut"
         minSdk = 24
         targetSdk = 35
         versionCode = 4
