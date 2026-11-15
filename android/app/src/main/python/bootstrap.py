@@ -1,6 +1,6 @@
 """Smoke-test entry point for the Android packaging.
 
-Proves the Intuisi core and the DeltaChat dependency chain can be imported
+Proves the Denyut core and the DeltaChat dependency chain can be imported
 and run inside Android-embedded Python. No account, no network use.
 """
 
@@ -11,16 +11,16 @@ import tempfile
 
 
 def selftest():
-    lines = ["Intuisi Android smoke test", "Python " + sys.version.split()[0]]
+    lines = ["Denyut Android smoke test", "Python " + sys.version.split()[0]]
     try:
-        from intuisi.core import Assistant
+        from denyut.core import Assistant
         store = tempfile.mkdtemp()
         behavior = os.path.join(os.path.dirname(__file__), "behavior.json")
         a = Assistant(behavior_path=behavior, store_dir=store)
-        lines.append("intuisi core: " + a.handle("/note android smoke", sender="smoke"))
-        lines.append("intuisi core: " + a.handle("/notes", sender="smoke"))
+        lines.append("denyut core: " + a.handle("/note android smoke", sender="smoke"))
+        lines.append("denyut core: " + a.handle("/notes", sender="smoke"))
     except Exception as e:
-        lines.append("intuisi core: FAILED (%r)" % (e,))
+        lines.append("denyut core: FAILED (%r)" % (e,))
     try:
         import android_bot
         lines.append("android_bot service module: imports OK")

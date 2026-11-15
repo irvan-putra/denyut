@@ -1,4 +1,4 @@
-package com.intuisi.assistant;
+package com.denyut.assistant;
 
 import android.app.Activity;
 import android.content.Intent;

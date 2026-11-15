@@ -14,7 +14,7 @@ re-check before relying on them.
   assistant that makes several model calls per user message consumes
   several requests per message.
 - OpenAI-compatible endpoint (VENDOR: console.groq.com/docs/openai):
-  base_url https://api.groq.com/openai/v1 - Intuisi's backend speaks this.
+  base_url https://api.groq.com/openai/v1 - Denyut's backend speaks this.
 - UNVERIFIED: whether signup needs a card; the "inputs not used for
   training" claim (their Services Agreement page did not render; a
   third-party roundup quotes it - treat as a lead only).
@@ -60,7 +60,7 @@ re-check before relying on them.
   supports arm64-v8a; current Chaquopy supports
   Python >= 3.12, which satisfies deltachat2's Python >= 3.11 need.
 - So: Kotlin app shell + Chaquopy + deltabot-cli/deltachat-rpc-client +
-  the official Android wheel = the same Intuisi Python core running inside
+  the official Android wheel = the same Denyut Python core running inside
   an Android app on the owner's phone. Feasibility is artifact-grounded; the integration
   itself is unbuilt and untested, and Android background/battery limits
   apply. APK builds can run in GitHub Actions.

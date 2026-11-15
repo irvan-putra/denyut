@@ -9,8 +9,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from intuisi.core import Assistant  # noqa: E402
-from intuisi.models import OpenAICompatibleBackend  # noqa: E402
+from denyut.core import Assistant  # noqa: E402
+from denyut.models import OpenAICompatibleBackend  # noqa: E402
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -38,7 +38,7 @@ def test_backend_against_mock(monkeypatch, tmp_path):
     server = HTTPServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
-        monkeypatch.setenv("INTUISI_API_KEY", "test-key")
+        monkeypatch.setenv("DENYUT_API_KEY", "test-key")
         backend = OpenAICompatibleBackend(
             "http://127.0.0.1:%d/v1" % server.server_port, "test-model")
         reply = backend.complete("you are helpful", [], "hello")
@@ -47,10 +47,10 @@ def test_backend_against_mock(monkeypatch, tmp_path):
         # and through the full Assistant with this backend configured
         cfg = tmp_path / "behavior.json"
         cfg.write_text(json.dumps({
-            "assistant": {"name": "Intuisi", "system_prompt": "s"},
+            "assistant": {"name": "Denyut", "system_prompt": "s"},
             "model": {"backend": "openai-compatible",
                       "base_url": "http://127.0.0.1:%d/v1" % server.server_port,
-                      "model": "test-model", "api_key_env": "INTUISI_API_KEY"},
+                      "model": "test-model", "api_key_env": "DENYUT_API_KEY"},
             "skills": {"notes": {"enabled": False},
                        "reminders": {"enabled": False},
                        "echo": {"enabled": False}}}))

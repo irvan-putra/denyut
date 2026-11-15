@@ -1,13 +1,13 @@
 {
   "assistant": {
-    "name": "Intuisi",
-    "system_prompt": "You are Intuisi, a helpful, concise personal assistant. Answer plainly. Say when you do not know."
+    "name": "Denyut",
+    "system_prompt": "You are Denyut, a helpful, concise personal assistant. Answer plainly. Say when you do not know."
   },
   "model": {
     "backend": "none",
     "base_url": "http://localhost:8080/v1",
     "model": "local-model",
-    "api_key_env": "INTUISI_API_KEY",
+    "api_key_env": "DENYUT_API_KEY",
     "max_tokens": 512
   },
   "skills": {

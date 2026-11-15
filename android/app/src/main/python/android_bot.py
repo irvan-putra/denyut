@@ -1,6 +1,6 @@
 """In-app DeltaChat bot service.
 
-Runs the Intuisi assistant as a DeltaChat bot inside the Android app.
+Runs the Denyut assistant as a DeltaChat bot inside the Android app.
 BotService (Java) calls serve() on a Python thread; the UI calls
 status(), setup_account() and invite_link().
 
@@ -18,9 +18,9 @@ import stat
 import threading
 import time
 
-from intuisi.core import Assistant
+from denyut.core import Assistant
 
-logger = logging.getLogger("intuisi.android_bot")
+logger = logging.getLogger("denyut.android_bot")
 
 _state = {"status": "stopped", "detail": ""}
 _stop = threading.Event()
@@ -41,7 +41,7 @@ def _set(status, detail=""):
     # Chaquopy bridges stdout to logcat; logging.info has no handlers by
     # default, so print too. Keeps the service observable and lets the CI
     # smoke test assert on real runtime state.
-    print("intuisi status: %s %s" % (status, detail), flush=True)
+    print("denyut status: %s %s" % (status, detail), flush=True)
 
 
 def find_server_executable(provided=None):
@@ -58,7 +58,7 @@ def find_server_executable(provided=None):
     return exe
 
 
-def setup_account(accounts_dir, rpc_server=None, relay_url=DEFAULT_RELAY, display_name="Intuisi"):
+def setup_account(accounts_dir, rpc_server=None, relay_url=DEFAULT_RELAY, display_name="Denyut"):
     """One-time: create a chatmail account for the bot.
 
     Mirrors deltabot-cli's init: add account, mark as bot, configure

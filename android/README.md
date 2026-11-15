@@ -1,6 +1,6 @@
-# Intuisi Android wrapper
+# Denyut Android wrapper
 
-Embeds the same Python `intuisi` core in an Android app via Chaquopy, with
+Embeds the same Python `denyut` core in an Android app via Chaquopy, with
 the DeltaChat stack resolved from PyPI's official Android wheels
 (deltachat2, deltabot-cli, deltachat-rpc-server android_21_arm64_v8a).
 
@@ -8,12 +8,12 @@ the DeltaChat stack resolved from PyPI's official Android wheels
 
 - `./gradlew :app:assembleDebug` succeeds (JDK 17, SDK 35, Gradle 8.9,
   AGP 8.7.3, Chaquopy 17.2.0): ~50 MB debug APK, arm64-v8a only.
-- APK contents checked byte-level: Python 3.12 runtime, the intuisi package
+- APK contents checked byte-level: Python 3.12 runtime, the denyut package
   + behavior.json, and `assets/deltachat-rpc-server` - a 22 MB ARM
   aarch64 ELF with interpreter /system/bin/linker64 (a real Android
   bionic binary), fetched from PyPI with sha256 pinned in
   tools/fetch_rpc_server.py.
-- Import/runtime test on the same Python version (3.12): intuisi core runs
+- Import/runtime test on the same Python version (3.12): denyut core runs
   /note + /notes; android_bot service module imports with the real
   deltachat2/deltabot_cli/deltachat_rpc_server installed.
 - Foreground service implemented: BotService (persistent notification,
@@ -46,7 +46,7 @@ the DeltaChat stack resolved from PyPI's official Android wheels
   chaquo.com/chaquopy/license/, checked 2026-11-15); distributed via
   Maven Central. We use 17.2.0 from mavenCentral().
 - DeltaChat core is MPL-2.0; deltabot-cli/deltachat2/deltachat-rpc-client
-  are published by the Delta Chat project. Intuisi's own code is MPL-2.0
+  are published by the Delta Chat project. Denyut's own code is MPL-2.0
   (see ../LICENSE), the same license as the DeltaChat core.
 
 ## Build

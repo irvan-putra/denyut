@@ -1,4 +1,4 @@
-package com.intuisi.assistant;
+package com.denyut.assistant;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -14,12 +14,12 @@ import com.chaquo.python.android.AndroidPlatform;
 import java.io.File;
 
 /**
- * Foreground service running the Intuisi DeltaChat bot on a Python thread.
+ * Foreground service running the Denyut DeltaChat bot on a Python thread.
  * A persistent notification keeps Android from killing it; the user can
  * stop it from the app or the notification.
  */
 public class BotService extends Service {
-    public static final String CHANNEL_ID = "intuisi_bot";
+    public static final String CHANNEL_ID = "denyut_bot";
     private static final int NOTIFICATION_ID = 1;
     private Thread botThread;
 
@@ -27,7 +27,7 @@ public class BotService extends Service {
     public void onCreate() {
         super.onCreate();
         NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID, "Intuisi bot", NotificationManager.IMPORTANCE_LOW);
+                CHANNEL_ID, "Denyut bot", NotificationManager.IMPORTANCE_LOW);
         getSystemService(NotificationManager.class).createNotificationChannel(channel);
     }
 
@@ -38,7 +38,7 @@ public class BotService extends Service {
                 this, 0, openApp, PendingIntent.FLAG_IMMUTABLE);
         Notification notification =
                 new Notification.Builder(this, CHANNEL_ID)
-                        .setContentTitle("Intuisi")
+                        .setContentTitle("Denyut")
                         .setContentText("Assistant bot is running")
                         .setSmallIcon(android.R.drawable.ic_dialog_info)
                         .setContentIntent(pending)

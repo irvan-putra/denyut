@@ -18,7 +18,7 @@ def load_adapter():
     class BotCli:
         def __init__(self, name):
             self.name = name
-            self.config_dir = os.environ["INTUISI_TEST_STORE"]
+            self.config_dir = os.environ["DENYUT_TEST_STORE"]
             self._handlers = []
             self._starts = []
 
@@ -53,7 +53,7 @@ def load_adapter():
 
     sys.modules["deltabot_cli"] = dbc
     sys.modules["deltachat2"] = dc2
-    mod = importlib.import_module("intuisi.deltachat_bot")
+    mod = importlib.import_module("denyut.deltachat_bot")
     return mod, dbc.BotCli
 
 
@@ -90,7 +90,7 @@ class FakeBot:
 
 
 def test_adapter_routes_and_replies(tmp_path, monkeypatch):
-    monkeypatch.setenv("INTUISI_TEST_STORE", str(tmp_path))
+    monkeypatch.setenv("DENYUT_TEST_STORE", str(tmp_path))
     mod, _ = load_adapter()
     bot = FakeBot()
     mod.on_message(bot, 1, FakeEvent(FakeMsg("/note adapter works")))
@@ -100,7 +100,7 @@ def test_adapter_routes_and_replies(tmp_path, monkeypatch):
 
 
 def test_adapter_fires_due_reminders(tmp_path, monkeypatch):
-    monkeypatch.setenv("INTUISI_TEST_STORE", str(tmp_path))
+    monkeypatch.setenv("DENYUT_TEST_STORE", str(tmp_path))
     mod, _ = load_adapter()
     bot = FakeBot()
     assistant = mod.get_assistant()

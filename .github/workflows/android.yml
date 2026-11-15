@@ -26,7 +26,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: intuisi-v0.6.4-debug-apk
+          name: denyut-v0.6.4-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
 
   smoke-test:
@@ -37,7 +37,7 @@ jobs:
       - name: Download APK
         uses: actions/download-artifact@v4
         with:
-          name: intuisi-v0.6.4-debug-apk
+          name: denyut-v0.6.4-debug-apk
           path: apk
       # GitHub-hosted ubuntu-latest runners expose /dev/kvm but the runner
       # user is not always in the kvm group; this udev rule is the standard
@@ -65,10 +65,10 @@ jobs:
             ls -l apk/
             adb install -r -g apk/app-debug.apk
             adb logcat -c
-            adb shell am start -n com.intuisi.assistant/.MainActivity
+            adb shell am start -n com.denyut.assistant/.MainActivity
             sleep 20
-            adb shell am start-foreground-service -n com.intuisi.assistant/.BotService \
-              || adb shell am startservice -n com.intuisi.assistant/.BotService
+            adb shell am start-foreground-service -n com.denyut.assistant/.BotService \
+              || adb shell am startservice -n com.denyut.assistant/.BotService
             # Poll logcat until the bot reports a state. serve() sets
             # "waiting_setup"/"running" only AFTER rpc.get_all_account_ids()
             # returns, i.e. after a real JSON-RPC round trip to the spawned
@@ -77,17 +77,17 @@ jobs:
             for i in $(seq 1 12); do
               sleep 10
               adb logcat -d > smoke.log || true
-              if grep -q "intuisi status: waiting_setup\|intuisi status: running\|intuisi status: error" smoke.log; then break; fi
+              if grep -q "denyut status: waiting_setup\|denyut status: running\|denyut status: error" smoke.log; then break; fi
             done
             echo "===== filtered logcat ====="
-            grep -i "intuisi\|python\|chaquo\|AndroidRuntime" smoke.log || true
+            grep -i "denyut\|python\|chaquo\|AndroidRuntime" smoke.log || true
             # Process check runs ps remotely and greps LOCALLY, so the grep
             # itself can never self-match the device process list.
             adb shell "ps -A" > ps.txt || true
             echo "===== rpc-server process check ====="
             grep -i "rpcserver" ps.txt || echo "no rpcserver process visible"
             # Failure signals first.
-            if grep -q "intuisi status: error" smoke.log; then
+            if grep -q "denyut status: error" smoke.log; then
               echo "SMOKE FAIL: bot service reported error"; exit 1
             fi
             if grep -q "rpc-server missing\|not executable\|AndroidRuntime.*FATAL" smoke.log; then
@@ -95,7 +95,7 @@ jobs:
             fi
             # Green requires BOTH: the post-round-trip status marker AND a
             # live rpc-server process on the device.
-            if grep -q "intuisi status: waiting_setup\|intuisi status: running" smoke.log \
+            if grep -q "denyut status: waiting_setup\|denyut status: running" smoke.log \
               && grep -qi "rpcserver" ps.txt; then
               echo "SMOKE PASS: rpc-server exec + live process + JSON-RPC round trip under translation"
             else

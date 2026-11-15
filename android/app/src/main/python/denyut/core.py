@@ -50,7 +50,7 @@ def parse_message(text):
 class Assistant:
     def __init__(self, behavior_path=None, store_dir="."):
         self.config = load_behavior(behavior_path)
-        self.name = self.config.get("assistant", {}).get("name", "Intuisi")
+        self.name = self.config.get("assistant", {}).get("name", "Denyut")
         self.system_prompt = self.config.get("assistant", {}).get(
             "system_prompt", "")
         self.backend = build_backend(self.config)

@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.intuisi.assistant"
+    namespace = "com.denyut.assistant"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.intuisi.assistant"
+        applicationId = "com.denyut.assistant"
         minSdk = 24
         targetSdk = 35
         versionCode = 4

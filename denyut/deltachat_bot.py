@@ -10,9 +10,9 @@ agnostic and unit-tested without any DeltaChat dependency.
 
 Usage:
   pip install deltabot-cli
-  python -m intuisi.deltachat_bot init DCACCOUNT:https://nine.testrun.org/new
-  python -m intuisi.deltachat_bot link     # prints invite link/QR
-  python -m intuisi.deltachat_bot serve
+  python -m denyut.deltachat_bot init DCACCOUNT:https://nine.testrun.org/new
+  python -m denyut.deltachat_bot link     # prints invite link/QR
+  python -m denyut.deltachat_bot serve
 """
 
 import threading
@@ -23,7 +23,7 @@ from deltachat2 import MsgData, events  # noqa: E402
 
 from .core import Assistant
 
-cli = BotCli("intuisi")
+cli = BotCli("denyut")
 _assistant = None
 REMINDER_POLL_SECONDS = 30
 

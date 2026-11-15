@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from intuisi.core import Assistant  # noqa: E402
+from denyut.core import Assistant  # noqa: E402
 
 BEHAVIOR = os.path.join(os.path.dirname(__file__), "..", "behavior.json")
 T0 = 1_700_000_000.0

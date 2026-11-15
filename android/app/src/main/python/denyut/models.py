@@ -26,7 +26,7 @@ class EchoBackend:
 class OpenAICompatibleBackend:
     name = "openai-compatible"
 
-    def __init__(self, base_url, model, api_key_env="INTUISI_API_KEY",
+    def __init__(self, base_url, model, api_key_env="DENYUT_API_KEY",
                  max_tokens=512, timeout=60):
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -70,6 +70,6 @@ def build_backend(cfg):
         return OpenAICompatibleBackend(
             base_url=m.get("base_url", "http://localhost:8080/v1"),
             model=m.get("model", "local-model"),
-            api_key_env=m.get("api_key_env", "INTUISI_API_KEY"),
+            api_key_env=m.get("api_key_env", "DENYUT_API_KEY"),
             max_tokens=int(m.get("max_tokens", 512)))
     raise ValueError("unknown model backend: %r" % kind)
