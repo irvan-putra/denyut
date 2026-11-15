@@ -48,6 +48,20 @@ public class MainActivity extends Activity {
         });
         stopBtn.setOnClickListener(v ->
                 stopService(new Intent(this, BotService.class)));
+
+        // CI/test hook: launching with --ez autostart_bot true starts the
+        // bot immediately, through the exact code path of the Start button.
+        // The app starts its own service while foreground (same uid), which
+        // adb shell's am start-foreground-service cannot do for a
+        // non-exported service on API 34+.
+        if (getIntent().getBooleanExtra("autostart_bot", false)) {
+            Intent intent = new Intent(this, BotService.class);
+            if (Build.VERSION.SDK_INT >= 26) {
+                startForegroundService(intent);
+            } else {
+                startService(intent);
+            }
+        }
         selftestBtn.setOnClickListener(v -> statusView.setText(
                 Python.getInstance().getModule("bootstrap")
                         .callAttr("selftest").toString()));

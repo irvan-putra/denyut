@@ -61,14 +61,15 @@ jobs:
           # the foreground service starts Python and execs the bundled
           # deltachat-rpc-server from nativeLibraryDir under translation.
           script: |
-            set -e
+            # No set -e: gather evidence at every stage, judge at the end.
             ls -l apk/
             adb install -r -g apk/app-debug.apk
             adb logcat -c
-            adb shell am start -n com.denyut.assistant/.MainActivity
-            sleep 20
-            adb shell am start-foreground-service -n com.denyut.assistant/.BotService \
-              || adb shell am startservice -n com.denyut.assistant/.BotService
+            # The autostart_bot extra makes MainActivity start BotService
+            # itself (foreground app, same uid) - adb shell cannot start a
+            # non-exported FGS on API 34+ ("Requires permission not
+            # exported from uid", observed in run 43680668213).
+            adb shell am start -n com.denyut.assistant/.MainActivity --ez autostart_bot true
             # Poll logcat until the bot reports a state. serve() sets
             # "waiting_setup"/"running" only AFTER rpc.get_all_account_ids()
             # returns, i.e. after a real JSON-RPC round trip to the spawned
