@@ -38,13 +38,18 @@ redact() {
 }
 
 adb logcat -c
+# The smoke phase leaves MainActivity running on top; a plain am start
+# then only delivers the intent to the running instance ("Activity not
+# started, intent has been delivered to currently running top-most
+# instance", run 43685398773) and onCreate - which holds the DEBUG
+# hooks - never re-runs. Force a cold start so the extras are honored.
+adb shell am force-stop com.vanipy.denyut
 adb shell am start -n com.vanipy.denyut/.MainActivity \
   --ez autostart_bot true --ez autosetup_bot true
 
 echo "===== waiting for setup + invite ====="
 i=0
-invite=""
-while [ "$i" -lt 24 ]; do
+while [ "$i" -lt 36 ]; do
   sleep 10
   adb logcat -d > setup.log 2>/dev/null
   if grep -q "denyut setup: failed" setup.log; then
