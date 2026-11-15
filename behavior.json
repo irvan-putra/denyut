@@ -1,0 +1,18 @@
+{
+  "assistant": {
+    "name": "Intuisi",
+    "system_prompt": "You are Intuisi, a helpful, concise personal assistant. Answer plainly. Say when you do not know."
+  },
+  "model": {
+    "backend": "none",
+    "base_url": "http://localhost:8080/v1",
+    "model": "local-model",
+    "api_key_env": "INTUISI_API_KEY",
+    "max_tokens": 512
+  },
+  "skills": {
+    "notes": {"enabled": true, "store": "notes.json"},
+    "reminders": {"enabled": true, "store": "reminders.json"},
+    "echo": {"enabled": true}
+  }
+}

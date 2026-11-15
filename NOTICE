@@ -1,0 +1,18 @@
+Intuisi assistant
+
+This project bundles or depends on third-party open-source components:
+
+- deltachat-rpc-server (bundled binary, arm64-v8a, version 2.58.0):
+  built from chatmail/core, (c) 2019 Bjoern Petersen and contributors,
+  Mozilla Public License 2.0 (full text: licenses/MPL-2.0.txt).
+  Corresponding source (MPL-2.0 section 3.2):
+  https://github.com/chatmail/core tag v2.58.0
+  (commit c2c984d06594e4608882c384bca8c3d027b5d8a0).
+  Retrieved unmodified as the official PyPI wheel
+  deltachat-rpc-server==2.58.0 (pinned URL + sha256 verified at fetch
+  time by tools/fetch_rpc_server.py).
+- deltachat2 (https://github.com/adbenitez/deltachat2): MPL-2.0,
+  installed from PyPI at build time, unmodified.
+- deltabot-cli (https://github.com/deltachat-bot/deltabot-cli-py):
+  MPL-2.0, installed from PyPI at build time, unmodified.
+- Chaquopy (https://chaquo.com/chaquopy): MIT.

@@ -1,0 +1,93 @@
+name: android-apk
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: android-actions/setup-android@v3
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew :app:assembleDebug --no-daemon
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: intuisi-v0.6.4-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: intuisi-v0.6.4-debug-apk
+          path: apk
+      # GitHub-hosted ubuntu-latest runners expose /dev/kvm but the runner
+      # user is not always in the kvm group; this udev rule is the standard
+      # android-emulator-runner pre-step so the emulator gets hardware
+      # acceleration instead of a degraded -accel off boot.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run smoke test on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          # The APK is arm64-only (deltachat-rpc-server ships no x86_64
+          # Android wheel on PyPI). The x86_64 google_apis API-34 image is
+          # VERIFIED to contain libndk_translation, so the arm64 app runs
+          # via translation. This script asserts the real runtime boundary:
+          # the foreground service starts Python and execs the bundled
+          # deltachat-rpc-server from nativeLibraryDir under translation.
+          script: |
+            set -e
+            ls -l apk/
+            adb install -r -g apk/app-debug.apk
+            adb logcat -c
+            adb shell am start -n com.intuisi.assistant/.MainActivity
+            sleep 20
+            adb shell am start-foreground-service -n com.intuisi.assistant/.BotService \
+              || adb shell am startservice -n com.intuisi.assistant/.BotService
+            # Poll logcat until the bot reports a terminal-ish state.
+            for i in $(seq 1 12); do
+              sleep 10
+              adb logcat -d > smoke.log || true
+              if grep -q "intuisi status:" smoke.log; then break; fi
+            done
+            echo "===== filtered logcat ====="
+            grep -i "intuisi\|python\|chaquo\|AndroidRuntime" smoke.log || true
+            echo "===== rpc-server process check ====="
+            adb shell "ps -A | grep -i rpcserver" || echo "no rpcserver process visible"
+            # Failure signals first.
+            if grep -q "intuisi status: error" smoke.log; then
+              echo "SMOKE FAIL: bot service reported error"; exit 1
+            fi
+            if grep -q "rpc-server missing\|not executable\|AndroidRuntime.*FATAL" smoke.log; then
+              echo "SMOKE FAIL: rpc-server exec problem"; exit 1
+            fi
+            # Success: serve() reached the account check, which means the
+            # rpc-server process spawned and answered JSON-RPC under
+            # translation.
+            if grep -q "intuisi status: waiting_setup\|intuisi status: running" smoke.log; then
+              echo "SMOKE PASS: rpc-server exec + Python service up under translation"
+            else
+              echo "SMOKE FAIL: no bot status reached in 120s"; exit 1
+            fi
