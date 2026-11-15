@@ -23,6 +23,11 @@ android {
         }
     }
 
+    buildFeatures {
+        // BuildConfig is needed for the DEBUG gate on the autostart hook.
+        buildConfig = true
+    }
+
     // The rpc-server binary must be extracted to disk at install time so it
     // can be executed from nativeLibraryDir (execve from the app home dir is
     // blocked for targetSdk 29+; embedded-and-extracted is the supported path).
