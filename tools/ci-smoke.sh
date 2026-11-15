@@ -35,14 +35,42 @@ done
 echo "===== filtered logcat ====="
 grep -i "denyut\|python\|chaquo\|AndroidRuntime" smoke.log || true
 
+# Give the poll loop time to emit heartbeats (one per 5s, each a fresh
+# JSON-RPC round trip) so liveness is proven over an interval, and any
+# post-response server death has time to surface.
+sleep 15
+
 # ps runs on-device, the grep runs HERE - it can never self-match the
-# device process list.
+# device process list. Under binfmt_misc translation the server's
+# kernel comm is the interpreter name (run 43684014113: pid 3623,
+# child of the app, shown as
+# "ndk_translation_program_runner_binfmt_misc_arm64"), so a name grep
+# for rpcserver/librpcserver never matches. Identity instead: USER ==
+# the app's user AND PPID == the app process PID AND runner comm,
+# corroborated by /proc/<pid>/cmdline.
+app_uid=$(adb shell "pm list packages -U com.vanipy.denyut" | tr -d '\r' | sed 's/.*uid://')
+app_user="u0_a$((app_uid - 10000))"
+app_pid=$(adb shell "pidof com.vanipy.denyut" | tr -d '\r ')
+echo "app uid: $app_uid  user: $app_user  pid: $app_pid"
 adb shell "ps -A" > ps.txt 2>/dev/null || true
+tr -d '\r' < ps.txt > ps-clean.txt
 echo "===== rpc-server process check ====="
-grep -i "rpc" ps.txt || { echo "no rpc process visible; full ps output:"; cat ps.txt; }
+server_pid=$(awk -v usr="$app_user" -v ppid="$app_pid" \
+  '$1==usr && $3==ppid && $NF ~ /^ndk_translation_program_runner/ {print $2}' ps-clean.txt)
+server_line=""
+if [ -n "$server_pid" ]; then
+  server_line=$(awk -v pid="$server_pid" '$2==pid' ps-clean.txt)
+  echo "$server_line"
+  echo "server cmdline: $(adb shell "cat /proc/$server_pid/cmdline" 2>/dev/null | tr '\0' ' ')"
+else
+  echo "no translated-runner child of the app process; full ps output:"
+  cat ps-clean.txt
+fi
 
 # Anything logged between the marker and the ps check (server crash,
-# poll error) only lands in a second capture.
+# poll error) only lands in a second capture. Poll heartbeats are
+# fresh JSON-RPC round trips: >=2 of them over the wait interval is a
+# core-owned liveness signal independent of ps.
 adb logcat -d > smoke2.log 2>/dev/null || true
 echo "===== post-marker logcat ====="
 grep -i "denyut\|python\|Fatal signal\|tombstone" smoke2.log | tail -40 || true
@@ -55,10 +83,13 @@ if grep -q "rpc-server missing\|not executable\|AndroidRuntime.*FATAL" smoke.log
   echo "SMOKE FAIL: rpc-server exec problem"
   exit 1
 fi
+polls=$(grep -c "denyut poll: waiting_setup round trip" smoke2.log)
+echo "poll heartbeats: $polls"
 if grep -q "denyut status: waiting_setup\|denyut status: running" smoke.log \
-  && grep -qi "rpc" ps.txt; then
-  echo "SMOKE PASS: rpc-server exec + live process + JSON-RPC round trip under translation"
+  && { [ -n "$server_pid" ] || [ "$polls" -ge 2 ]; }; then
+  echo "SMOKE PASS: rpc-server exec + JSON-RPC round trips under translation"
+  echo "(liveness: ${server_line:-no process match} / $polls poll heartbeats)"
   exit 0
 fi
-echo "SMOKE FAIL: missing status marker or live rpc-server process"
+echo "SMOKE FAIL: missing status marker, app-owned rpc-server process, or poll heartbeats"
 exit 1

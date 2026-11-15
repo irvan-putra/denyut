@@ -177,10 +177,17 @@ def serve(accounts_dir, store_dir, rpc_server=None):
             if not accids or not rpc.is_configured(accids[0]):
                 _set("waiting_setup",
                      "no account yet - run setup from the app")
+                polls = 0
                 while not _stop.wait(5):
                     accids = rpc.get_all_account_ids()
                     if accids and rpc.is_configured(accids[0]):
                         break
+                    # Every poll is a fresh JSON-RPC round trip; printing
+                    # it proves over an interval that the rpc-server child
+                    # is still alive and answering (CI smoke gate).
+                    polls += 1
+                    print("denyut poll: waiting_setup round trip #%d ok" % polls,
+                          flush=True)
                 if _stop.is_set():
                     return
             bot = Bot(rpc, _make_hooks(assistant, rpc))
