@@ -19,6 +19,23 @@ if [ "$RUN_CHAT_TEST" != "true" ]; then
   exit 0
 fi
 
+echo "===== host-side preflight (no accounts created) ====="
+# Every deltachat2 API name the round trip relies on, imported BEFORE
+# anything touches the relay: run 43687128731 burned the bot account
+# because an ImportError surfaced only after setup had succeeded. This
+# check creates no account and costs nothing.
+python3 -m pip install --quiet deltachat2 deltachat-rpc-server
+python3 - <<'PYEOF'
+from deltachat2 import MessageData, Rpc
+from deltachat2.transport import IOTransport
+from deltachat2.types import (
+    EventTypeConfigureProgress,
+    EventTypeIncomingMsg,
+    EventTypeSecurejoinJoinerProgress,
+)
+print("host preflight ok: deltachat2 API names verified")
+PYEOF
+
 RELAY_URL="https://nine.testrun.org/new"
 TOKEN="denyut-ci-$(date +%s)"
 INVITE_FILE=$(mktemp)
@@ -74,7 +91,6 @@ fi
 echo "SETUP PASS: throwaway account configured, invite captured (redacted from logs)"
 
 echo "===== host-side /echo round trip ====="
-python3 -m pip install --quiet deltachat2 deltachat-rpc-server
 python3 tools/ci-chat-test.py "$RELAY_URL" "$INVITE_FILE" "$TOKEN"
 result=$?
 
