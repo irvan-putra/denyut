@@ -168,7 +168,7 @@ def invite_link(accounts_dir, rpc_server=None):
 
 
 def _make_hooks(assistant, rpc_ref):
-    from deltachat2 import MsgData, events
+    from deltachat2 import MessageData, events
 
     hooks = events.HookCollection()
 
@@ -178,13 +178,13 @@ def _make_hooks(assistant, rpc_ref):
         if not text:
             return
         reply = assistant.handle(text, sender=str(event.msg.from_id))
-        bot.rpc.send_msg(accid, event.msg.chat_id, MsgData(text=reply))
+        bot.rpc.send_msg(accid, event.msg.chat_id, MessageData(text=reply))
 
     return hooks
 
 
 def _reminder_loop(assistant, rpc):
-    from deltachat2 import MsgData
+    from deltachat2 import MessageData
 
     while not _stop.wait(REMINDER_POLL_SECONDS):
         try:
@@ -193,7 +193,7 @@ def _reminder_loop(assistant, rpc):
                     chat_id = rpc.get_chat_id_by_contact_id(accid, int(sender))
                     if chat_id:
                         rpc.send_msg(accid, chat_id,
-                                     MsgData(text="Reminder: " + text))
+                                     MessageData(text="Reminder: " + text))
         except Exception:
             logger.exception("reminder loop")
 

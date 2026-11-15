@@ -40,7 +40,7 @@ def load_adapter():
     # stub deltachat2
     dc2 = types.ModuleType("deltachat2")
 
-    class MsgData:
+    class MessageData:
         def __init__(self, text=None):
             self.text = text
 
@@ -48,7 +48,7 @@ def load_adapter():
         class NewMessage:
             pass
 
-    dc2.MsgData = MsgData
+    dc2.MessageData = MessageData
     dc2.events = _Events
 
     sys.modules["deltabot_cli"] = dbc

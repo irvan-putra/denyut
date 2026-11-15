@@ -19,7 +19,7 @@ import threading
 import time
 
 from deltabot_cli import BotCli  # noqa: E402  (optional dependency)
-from deltachat2 import MsgData, events  # noqa: E402
+from deltachat2 import MessageData, events  # noqa: E402
 
 from .core import Assistant
 
@@ -42,7 +42,7 @@ def on_message(bot, accid, event):
         return
     sender = str(event.msg.from_id)
     reply = get_assistant().handle(text, sender=sender)
-    bot.rpc.send_msg(accid, event.msg.chat_id, MsgData(text=reply))
+    bot.rpc.send_msg(accid, event.msg.chat_id, MessageData(text=reply))
     fire_due(bot, accid)
 
 
@@ -51,7 +51,7 @@ def fire_due(bot, accid):
         chat_id = bot.rpc.get_chat_id_by_contact_id(accid, int(sender))
         if chat_id:
             bot.rpc.send_msg(accid, chat_id,
-                             MsgData(text="Reminder: " + text))
+                             MessageData(text="Reminder: " + text))
 
 
 @cli.on_start
