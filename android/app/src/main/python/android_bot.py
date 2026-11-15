@@ -151,7 +151,12 @@ def serve(accounts_dir, store_dir, rpc_server=None):
     from deltachat2.transport import IOTransport
 
     _stop.clear()
-    assistant = Assistant(store_dir=store_dir)
+    # Pass the behavior file explicitly: behavior.py's DEFAULT_PATH uses
+    # "<pkg>/../behavior.json", and Chaquopy's AssetFinder paths are
+    # virtual - the ".." component cannot resolve there (FileNotFoundError
+    # in CI run 43681839133). behavior.json sits next to this module.
+    behavior = os.path.join(os.path.dirname(__file__), "behavior.json")
+    assistant = Assistant(behavior_path=behavior, store_dir=store_dir)
     _set("starting")
     try:
         with IOTransport(accounts_dir=accounts_dir,
