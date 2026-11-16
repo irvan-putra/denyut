@@ -67,3 +67,7 @@ need a configured model backend.
 ## License
 
 Denyut's own code is MIT (see LICENSE). The bundled DeltaChat core stays MPL-2.0 - its notices and corresponding-source links live in NOTICE.
+
+## Research notes
+
+- [Small local model and low-cost provider options](docs/research/small-local-model-options.md) - source notes on a local model candidate, a llama.cpp route, and provider-side cost controls; no phone performance claims.
