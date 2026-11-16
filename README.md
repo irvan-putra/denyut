@@ -70,6 +70,8 @@ Denyut's own code is MIT (see LICENSE). The bundled DeltaChat core stays MPL-2.0
 
 ## Research notes
 
+- [Android background bot constraints](docs/research/android-background-bot-constraints.md) - official Android documentation notes on executable loading, foreground-service time limits and background starts; no device test or service-type choice claimed.
+- [Cloud options for Android testing](docs/research/cloud-android-test-options.md) - dated public prices and limits checked 2026-11-16; not quotes or reservations.
 - [Small local model and low-cost provider options](docs/research/small-local-model-options.md) - source notes on a local model candidate, a llama.cpp route, and provider-side cost controls; no phone performance claims.
 - [Denyut hosting cost estimate](docs/research/hosting-cost-estimate.md) - bounded single-user hosting prices, dated sources, and open tax/traffic/performance questions; no rental made.
 - [Gemma and AI Studio hosted-access supplement](docs/research/gemma-hosted-access-supplement.md) - current API, subscription-credit and privacy constraints; no account, billing, model download or integration tested.
