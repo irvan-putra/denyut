@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import math
 import os
 import re
 import subprocess
@@ -34,6 +35,8 @@ SWIPES = 0
 PHASE = "startup"
 CURRENT_LABEL = ""
 MAX_NO_PROGRESS_DUMPS = 2
+TAP_TARGET_MIN_DP = 48
+TAP_TARGET_MIN_PX = 48
 
 
 def dump() -> ET.Element:
@@ -138,6 +141,24 @@ def assert_contains(root: ET.Element, fragment: str) -> ET.Element:
     raise AssertionError(f"Expected visible text fragment not found: {fragment}")
 
 
+def minimum_tap_target_pixels(density_output: str) -> int:
+    """Convert Android's 48dp minimum touch target to physical pixels."""
+    overrides = re.findall(r"Override density:\s*(\d+)", density_output)
+    physical = re.findall(r"Physical density:\s*(\d+)", density_output)
+    values = overrides or physical
+    if not values:
+        raise AssertionError(f"Could not determine display density: {density_output!r}")
+    dpi = int(values[-1])
+    if not 80 <= dpi <= 1000:
+        raise AssertionError(f"Implausible display density: {dpi}")
+    return math.ceil(TAP_TARGET_MIN_DP * dpi / 160)
+
+
+def tap_target_has_minimum_height(node: ET.Element) -> bool:
+    _, top, _, bottom = parse_bounds(node)
+    return bottom - top >= TAP_TARGET_MIN_PX
+
+
 def parse_bounds(node: ET.Element) -> tuple[int, int, int, int]:
     match = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]",
                          node.attrib.get("bounds", ""))
@@ -160,10 +181,10 @@ def scroll_viewport(root: ET.Element) -> tuple[int, int, int, int]:
 def fully_in_scroll_viewport(root: ET.Element, node: ET.Element) -> bool:
     left, top, right, bottom = parse_bounds(node)
     view_left, view_top, view_right, view_bottom = scroll_viewport(root)
-    # Full-width Android buttons may share the viewport's horizontal edges; require
-    # complete horizontal containment and strict vertical clearance from clipping.
+    # Android bounds are half-open: equality at the viewport edge is fully contained.
+    # A clipped sliver is separately rejected by the minimum 48dp tap-target height.
     return (left >= view_left and right <= view_right
-            and top > view_top and bottom < view_bottom)
+            and top >= view_top and bottom <= view_bottom)
 
 
 def tap_node(node: ET.Element, root: ET.Element) -> None:
@@ -172,8 +193,8 @@ def tap_node(node: ET.Element, root: ET.Element) -> None:
     if not screen_nodes:
         raise AssertionError("No root view in current UI hierarchy")
     screen_left, screen_top, screen_right, screen_bottom = parse_bounds(screen_nodes[0])
-    if (left < screen_left or top <= screen_top
-            or right > screen_right or bottom >= screen_bottom):
+    if (left < screen_left or top < screen_top
+            or right > screen_right or bottom > screen_bottom):
         raise AssertionError(f"Refusing to tap clipped/off-screen control {node.attrib.get('text', '')!r}")
     for scrollable in (n for n in root.iter("node")
                        if n.attrib.get("scrollable") == "true"):
@@ -181,6 +202,9 @@ def tap_node(node: ET.Element, root: ET.Element) -> None:
             if not fully_in_scroll_viewport(root, node):
                 raise AssertionError(f"Refusing to tap clipped scroll control {node.attrib.get('text', '')!r}")
             break
+    if not tap_target_has_minimum_height(node):
+        emit_diagnostics(f"tap target is shorter than {TAP_TARGET_MIN_DP}dp", node.attrib.get("text", ""))
+        raise AssertionError(f"Refusing to tap undersized target {node.attrib.get('text', '')!r}")
     adb("shell", "input", "tap", str((left + right) // 2), str((top + bottom) // 2))
     time.sleep(0.8)
 
@@ -249,7 +273,8 @@ def scroll_until(label: str, *, require_fully_visible: bool = False,
             continue
         found = matching_nodes(root, label, contains_fragment)
         if found and (not require_fully_visible
-                      or fully_in_scroll_viewport(root, found[0])):
+                      or (fully_in_scroll_viewport(root, found[0])
+                          and tap_target_has_minimum_height(found[0]))):
             return root
         signature = LAST_XML
         if signature == previous_missing_xml:
@@ -362,12 +387,14 @@ def inspect_disabled_controls(font_tag: str) -> None:
 
 
 def main() -> None:
+    global TAP_TARGET_MIN_PX
     set_phase("startup")
     devices = adb("devices", "-l")
     print(devices, flush=True)
     if not any(line.startswith("emulator-") and "device" in line
                for line in devices.splitlines()[1:]):
         raise RuntimeError("Expected one running emulator")
+    TAP_TARGET_MIN_PX = minimum_tap_target_pixels(adb("shell", "wm", "density"))
 
     # Launch normally: no autostart_bot or autosetup_bot extras.
     set_phase("normal-font launch")
