@@ -29,20 +29,32 @@ def adb(*args: str) -> str:
 
 
 LAST_XML = ""
+LAST_DUMP_ERROR = ""
 SWIPES = 0
+PHASE = "startup"
+CURRENT_LABEL = ""
+MAX_NO_PROGRESS_DUMPS = 2
 
 
 def dump() -> ET.Element:
-    global LAST_XML
-    adb("shell", "uiautomator", "dump", "/sdcard/denyut-window.xml")
-    LAST_XML = adb("shell", "cat", "/sdcard/denyut-window.xml")
-    return ET.fromstring(LAST_XML)
+    global LAST_XML, LAST_DUMP_ERROR
+    try:
+        adb("shell", "uiautomator", "dump", "/sdcard/denyut-window.xml")
+        LAST_XML = adb("shell", "cat", "/sdcard/denyut-window.xml")
+        root = ET.fromstring(LAST_XML)
+        LAST_DUMP_ERROR = ""
+        return root
+    except (subprocess.CalledProcessError, ET.ParseError, OSError) as error:
+        LAST_DUMP_ERROR = f"{type(error).__name__}: {error}"
+        raise
 
 
-def emit_diagnostics(reason: str) -> None:
-    """Failure-only evidence in the log (no artifact, no new assertion): the last hierarchy this script parsed,
-    the swipe count and the display size. The app is account-free and shows only fixed text."""
-    print(f"UI_DIAG_BEGIN {reason}", flush=True)
+def emit_diagnostics(reason: str, label: str | None = None) -> None:
+    """Failure-only evidence: stage, target, last parsed hierarchy, swipe count, display size."""
+    target = label if label is not None else CURRENT_LABEL
+    print(f"UI_DIAG_BEGIN phase={PHASE} label={target!r} reason={reason}", flush=True)
+    if LAST_DUMP_ERROR:
+        print(f"last_dump_error={LAST_DUMP_ERROR}", flush=True)
     print(f"swipes_so_far={SWIPES}", flush=True)
     for cmd in (("wm", "size"), ("wm", "density")):
         try:
@@ -70,6 +82,36 @@ def wait_for(predicate, description: str, timeout: float = 30.0) -> ET.Element:
     raise AssertionError(f"Timed out waiting for {description}: {last_error}")
 
 
+
+def wait_for_main_scroll_container(description: str, anchor: str,
+                                   absent_dialog_labels: tuple[str, ...]) -> ET.Element:
+    """Wait for dialog dismissal without assuming the retained list is at its top."""
+    global CURRENT_LABEL
+    CURRENT_LABEL = anchor
+    deadline = time.monotonic() + 30.0
+    last_error = ""
+    while time.monotonic() < deadline:
+        try:
+            root = dump()
+        except (subprocess.CalledProcessError, ET.ParseError, OSError) as error:
+            last_error = f"{type(error).__name__}: {error}"
+            time.sleep(0.5)
+            continue
+        scrollables = [node for node in root.iter("node")
+                       if node.attrib.get("scrollable") == "true"]
+        anchor_visible = bool(nodes(root, anchor))
+        dialog_gone = all(not nodes(root, label) for label in absent_dialog_labels)
+        # Modal screens can themselves be scrollable. Require the underlying app's
+        # single list plus its retained-viewport anchor, and dialog-only labels gone.
+        if len(scrollables) == 1 and anchor_visible and dialog_gone:
+            return root
+        time.sleep(0.5)
+    reason = f"timed out after 30s waiting for main screen after {description}"
+    if last_error:
+        reason += f"; last hierarchy error: {last_error}"
+    emit_diagnostics(reason, anchor)
+    raise AssertionError(reason)
+
 def nodes(root: ET.Element, text: str) -> list[ET.Element]:
     return [n for n in root.iter("node") if n.attrib.get("text", "").strip() == text]
 
@@ -96,10 +138,49 @@ def assert_contains(root: ET.Element, fragment: str) -> ET.Element:
     raise AssertionError(f"Expected visible text fragment not found: {fragment}")
 
 
-def tap_node(node: ET.Element) -> None:
-    pieces = node.attrib["bounds"].split("][")
-    left, top = map(int, pieces[0].strip("[]").split(","))
-    right, bottom = map(int, pieces[1].strip("[]").split(","))
+def parse_bounds(node: ET.Element) -> tuple[int, int, int, int]:
+    match = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]",
+                         node.attrib.get("bounds", ""))
+    if not match:
+        raise AssertionError(f"Invalid bounds for {node.attrib.get('text', '')!r}")
+    left, top, right, bottom = map(int, match.groups())
+    if right <= left or bottom <= top:
+        raise AssertionError(f"Non-positive bounds for {node.attrib.get('text', '')!r}")
+    return left, top, right, bottom
+
+
+def scroll_viewport(root: ET.Element) -> tuple[int, int, int, int]:
+    scrollables = [node for node in root.iter("node")
+                   if node.attrib.get("scrollable") == "true"]
+    if len(scrollables) != 1:
+        raise AssertionError(f"Expected one scrollable container, found {len(scrollables)}")
+    return parse_bounds(scrollables[0])
+
+
+def fully_in_scroll_viewport(root: ET.Element, node: ET.Element) -> bool:
+    left, top, right, bottom = parse_bounds(node)
+    view_left, view_top, view_right, view_bottom = scroll_viewport(root)
+    # Full-width Android buttons may share the viewport's horizontal edges; require
+    # complete horizontal containment and strict vertical clearance from clipping.
+    return (left >= view_left and right <= view_right
+            and top > view_top and bottom < view_bottom)
+
+
+def tap_node(node: ET.Element, root: ET.Element) -> None:
+    left, top, right, bottom = parse_bounds(node)
+    screen_nodes = [child for child in root.iter("node")]
+    if not screen_nodes:
+        raise AssertionError("No root view in current UI hierarchy")
+    screen_left, screen_top, screen_right, screen_bottom = parse_bounds(screen_nodes[0])
+    if (left < screen_left or top <= screen_top
+            or right > screen_right or bottom >= screen_bottom):
+        raise AssertionError(f"Refusing to tap clipped/off-screen control {node.attrib.get('text', '')!r}")
+    for scrollable in (n for n in root.iter("node")
+                       if n.attrib.get("scrollable") == "true"):
+        if any(desc is node for desc in scrollable.iter("node")):
+            if not fully_in_scroll_viewport(root, node):
+                raise AssertionError(f"Refusing to tap clipped scroll control {node.attrib.get('text', '')!r}")
+            break
     adb("shell", "input", "tap", str((left + right) // 2), str((top + bottom) // 2))
     time.sleep(0.8)
 
@@ -120,44 +201,168 @@ def screenshot(name: str) -> None:
     print(f"SCREENSHOT_END {path.name}", flush=True)
 
 
-def swipe_scroll_container(root: ET.Element) -> None:
+def set_phase(phase: str) -> None:
+    global PHASE, CURRENT_LABEL
+    PHASE = phase
+    CURRENT_LABEL = ""
+
+
+def swipe_scroll_container(root: ET.Element, direction: str = "down") -> None:
     """Swipe inside the live scrollable bounds, never at fixed screen pixels."""
-    scrollables = [node for node in root.iter("node")
-                   if node.attrib.get("scrollable") == "true"]
-    if len(scrollables) != 1:
-        raise AssertionError(f"Expected one scrollable container, found {len(scrollables)}")
-    coords = [int(value) for value in re.findall(r"-?\d+", scrollables[0].attrib.get("bounds", ""))]
-    if len(coords) != 4:
-        raise AssertionError("Invalid scrollable container bounds")
-    left, top, right, bottom = coords
+    left, top, right, bottom = scroll_viewport(root)
     if right - left < 3 or bottom - top < 5:
         raise AssertionError("Scrollable container is too small for a swipe")
     x = left + (right - left) // 2
-    start_y = top + 3 * (bottom - top) // 4
-    end_y = top + (bottom - top) // 4
+    quarter = (bottom - top) // 4
+    if direction == "down":
+        start_y, end_y = top + 3 * quarter, top + quarter
+    elif direction == "up":
+        start_y, end_y = top + quarter, top + 3 * quarter
+    else:
+        raise ValueError(f"Unknown scroll direction: {direction}")
     adb("shell", "input", "swipe", str(x), str(start_y), str(x), str(end_y), "350")
 
 
-def scroll_until(label: str) -> ET.Element:
+def matching_nodes(root: ET.Element, label: str, contains_fragment: bool) -> list[ET.Element]:
+    if contains_fragment:
+        return [node for node in root.iter("node")
+                if label in node.attrib.get("text", "")
+                or label in node.attrib.get("content-desc", "")]
+    return nodes(root, label)
+
+
+def scroll_until(label: str, *, require_fully_visible: bool = False,
+                 contains_fragment: bool = False) -> ET.Element:
+    """Find one control with bounded polling/scrolling; return its fresh hierarchy."""
+    global SWIPES, CURRENT_LABEL
+    CURRENT_LABEL = label
     deadline = time.monotonic() + 30.0
+    previous_missing_xml: str | None = None
+    no_progress = 0
+    last_error = ""
     while time.monotonic() < deadline:
         try:
             root = dump()
-        except (subprocess.CalledProcessError, ET.ParseError):
+        except (subprocess.CalledProcessError, ET.ParseError, OSError) as error:
+            last_error = f"{type(error).__name__}: {error}"
             time.sleep(0.5)
             continue
-        found = nodes(root, label)
-        if found:
+        found = matching_nodes(root, label, contains_fragment)
+        if found and (not require_fully_visible
+                      or fully_in_scroll_viewport(root, found[0])):
             return root
-        swipe_scroll_container(root)
-        global SWIPES
+        signature = LAST_XML
+        if signature == previous_missing_xml:
+            no_progress += 1
+            if no_progress >= MAX_NO_PROGRESS_DUMPS:
+                reason = f"no scroll progress while seeking {label}"
+                emit_diagnostics(reason, label)
+                raise AssertionError(reason)
+        else:
+            no_progress = 0
+        previous_missing_xml = signature
+        try:
+            swipe_scroll_container(root, "down")
+        except AssertionError as error:
+            emit_diagnostics(f"cannot scroll while seeking {label}: {error}", label)
+            raise
         SWIPES += 1
         time.sleep(0.5)
-    emit_diagnostics(f"scroll_until timed out: {label}")
-    raise AssertionError(f"UI control not reachable by polling/scrolling: {label}")
+    reason = f"scroll_until timed out after 30s: {label}"
+    if last_error:
+        reason += f"; last hierarchy error: {last_error}"
+    emit_diagnostics(reason, label)
+    raise AssertionError(f"UI control not reachable: {label}")
+
+
+def is_at_scroll_top(root: ET.Element) -> bool:
+    status_nodes = nodes(root, "Status: stopped")
+    if not status_nodes:
+        return False
+    _, status_top, _, _ = parse_bounds(status_nodes[0])
+    _, viewport_top, _, _ = scroll_viewport(root)
+    return status_top == viewport_top
+
+
+def reset_scroll_to_top() -> ET.Element:
+    """Return the main list to its top using bounded, viewport-derived reverse swipes."""
+    global SWIPES, CURRENT_LABEL
+    CURRENT_LABEL = "Status: stopped at scroll origin"
+    deadline = time.monotonic() + 30.0
+    previous_xml: str | None = None
+    no_progress = 0
+    last_error = ""
+    while time.monotonic() < deadline:
+        try:
+            root = dump()
+        except (subprocess.CalledProcessError, ET.ParseError, OSError) as error:
+            last_error = f"{type(error).__name__}: {error}"
+            time.sleep(0.5)
+            continue
+        if is_at_scroll_top(root):
+            CURRENT_LABEL = ""
+            return root
+        signature = LAST_XML
+        if signature == previous_xml:
+            no_progress += 1
+            if no_progress >= MAX_NO_PROGRESS_DUMPS:
+                reason = "no scroll progress while returning to top"
+                emit_diagnostics(reason, "Status: stopped at scroll origin")
+                raise AssertionError(reason)
+        else:
+            no_progress = 0
+        previous_xml = signature
+        try:
+            swipe_scroll_container(root, "up")
+        except AssertionError as error:
+            emit_diagnostics(f"cannot reset scroll position: {error}", "Status: stopped at scroll origin")
+            raise
+        SWIPES += 1
+        time.sleep(0.5)
+    reason = "scroll-to-top timed out after 30s"
+    if last_error:
+        reason += f"; last hierarchy error: {last_error}"
+    emit_diagnostics(reason, "Status: stopped at scroll origin")
+    raise AssertionError(reason)
+
+
+def tap_visible(label: str) -> None:
+    """Seek, check, and tap from one fresh hierarchy while fully inside the viewport."""
+    root = scroll_until(label, require_fully_visible=True)
+    node = assert_text(root, label)
+    if node.attrib.get("enabled") != "true":
+        emit_diagnostics(f"tap target is not enabled: {label}", label)
+        raise AssertionError(f"Tap target is not enabled: {label}")
+    tap_node(node, root)
+
+
+def assert_disabled(root: ET.Element, label: str) -> None:
+    node = assert_text(root, label)
+    if node.attrib.get("enabled") != "false":
+        emit_diagnostics(f"{label} must remain disabled", label)
+        raise AssertionError(f"{label} must remain disabled")
+
+
+def inspect_disabled_controls(font_tag: str) -> None:
+    """Check every control from a fresh viewport; never require co-visibility."""
+    set_phase(f"{font_tag}-font disabled controls")
+    reset_scroll_to_top()
+    heading_root = scroll_until("Optional local Gemma (experimental)",
+                                contains_fragment=True)
+    assert_contains(heading_root, "Optional local Gemma (experimental)")
+    labels = ("Select existing verified owner contact", "Choose downloaded model file",
+              "Load local model", "Unload local model", "Cancel file import")
+    for label in labels:
+        CURRENT_LABEL = label
+        root = scroll_until(label, require_fully_visible=True)
+        assert_text(root, label)
+        if label in ("Load local model", "Unload local model"):
+            assert_disabled(root, label)
+            screenshot(f"{label.lower().replace(' ', '-')}-disabled-{font_tag}-font")
 
 
 def main() -> None:
+    set_phase("startup")
     devices = adb("devices", "-l")
     print(devices, flush=True)
     if not any(line.startswith("emulator-") and "device" in line
@@ -165,6 +370,7 @@ def main() -> None:
         raise RuntimeError("Expected one running emulator")
 
     # Launch normally: no autostart_bot or autosetup_bot extras.
+    set_phase("normal-font launch")
     adb("shell", "am", "force-stop", PACKAGE)
     adb("shell", "am", "start", "-W", "-n", ACTIVITY)
     root = wait_for(lambda r: bool(nodes(r, "Start bot")), "main activity controls")
@@ -172,63 +378,63 @@ def main() -> None:
         assert_text(root, label)
     screenshot("main-top-normal-font")
 
-    # Reach the new controls and verify both activation actions stay disabled.
-    root = scroll_until("Load local model")
-    assert_contains(root, "Optional local Gemma (experimental)")
-    for label in ("Select existing verified owner contact", "Choose downloaded model file",
-                  "Unload local model", "Cancel file import"):
-        assert_text(root, label)
-    if assert_text(root, "Load local model").attrib.get("enabled") != "false":
-        raise AssertionError("Load must stay disabled before import/activation")
-    if assert_text(root, "Unload local model").attrib.get("enabled") != "false":
-        raise AssertionError("Unload must stay disabled before import/activation")
-    screenshot("controls-normal-font")
+    # Inspect the disabled-model heading and each control in its own fresh viewport.
+    inspect_disabled_controls("normal")
 
-    # Bot is not running, so the owner query returns the empty state without RPC/account access.
-    tap_node(assert_text(root, "Select existing verified owner contact"))
-    root = wait_for(lambda r: bool(nodes(r, "No eligible owner contact")), "empty owner picker dialog")
+    # The owner picker is account-free because the bot is stopped; reacquire after reset.
+    set_phase("normal-font owner picker")
+    reset_scroll_to_top()
+    tap_visible("Select existing verified owner contact")
+    root = wait_for(lambda r: bool(nodes(r, "No eligible owner contact")),
+                    "empty owner picker dialog")
     assert_contains(root, "This picker never creates accounts or pairs contacts.")
     screenshot("owner-picker-empty")
-    tap_node(assert_text(root, "OK"))
+    tap_node(assert_text(root, "OK"), root)
+    wait_for_main_scroll_container("owner picker", "Select existing verified owner contact",
+                                   ("No eligible owner contact", "OK"))
+    reset_scroll_to_top()
 
     # Inspect the warning, then cancel. Never press Choose file or open the system picker.
-    root = scroll_until("Choose downloaded model file")
-    tap_node(assert_text(root, "Choose downloaded model file"))
-    root = wait_for(lambda r: bool(nodes(r, "Import 2.59 GB model file?")), "file import warning dialog")
+    set_phase("normal-font import warning")
+    reset_scroll_to_top()
+    tap_visible("Choose downloaded model file")
+    root = wait_for(lambda r: bool(nodes(r, "Import 2.59 GB model file?")),
+                    "file import warning dialog")
     assert_contains(root, "This app will not download it.")
     screenshot("import-confirmation")
-    tap_node(assert_text(root, "Cancel"))
-    wait_for(lambda r: bool(nodes(r, "Choose downloaded model file")), "dismissed import dialog")
+    tap_node(assert_text(root, "Cancel"), root)
+    wait_for_main_scroll_container("import warning", "Choose downloaded model file",
+                                   ("Import 2.59 GB model file?", "Cancel"))
+    reset_scroll_to_top()
 
     # The full versioned LiteRT license and generated third-party notice text is
     # bundled locally and reachable in-app; this path makes no network request.
-    root = scroll_until("Third-party licenses and notices")
-    tap_node(assert_text(root, "Third-party licenses and notices"))
+    set_phase("normal-font bundled notices")
+    reset_scroll_to_top()
+    tap_visible("Third-party licenses and notices")
     root = wait_for(lambda r: bool(nodes(r, "Third-party licenses and notices"))
                     and contains(r, "LiteRT-LM Android API 0.19.1"),
                     "bundled LiteRT license text")
     assert_contains(root, "Apache License")
     screenshot("third-party-notices")
-    tap_node(assert_text(root, "Close"))
-    wait_for(lambda r: bool(nodes(r, "Third-party licenses and notices")), "dismissed notices dialog")
+    tap_node(assert_text(root, "Close"), root)
+    wait_for_main_scroll_container("notices dialog", "Third-party licenses and notices",
+                                   ("LiteRT-LM Android API 0.19.1", "Apache License", "Close"))
+    reset_scroll_to_top()
 
-    # Larger font: verify key controls remain reachable and the two activation buttons stay disabled.
+    # Larger font: reach the same labels independently; no co-visible-controls assumption.
+    set_phase("large-font setup")
     adb("shell", "settings", "put", "system", "font_scale", "1.30")
     try:
         adb("shell", "am", "force-stop", PACKAGE)
         adb("shell", "am", "start", "-W", "-n", ACTIVITY)
-        root = scroll_until("Load local model")
-        for label in ("Select existing verified owner contact", "Choose downloaded model file",
-                      "Load local model", "Unload local model", "Cancel file import"):
-            assert_text(root, label)
-        if assert_text(root, "Load local model").attrib.get("enabled") != "false":
-            raise AssertionError("Load must remain disabled at large font scale")
-        if assert_text(root, "Unload local model").attrib.get("enabled") != "false":
-            raise AssertionError("Unload must remain disabled at large font scale")
-        screenshot("controls-large-font")
+        wait_for(lambda r: bool(nodes(r, "Start bot")), "main activity at large font")
+        inspect_disabled_controls("large")
     finally:
+        set_phase("restore normal font")
         adb("shell", "settings", "put", "system", "font_scale", "1.0")
-    print("PASS: disabled-state UI smoke; bot not started, no accounts, provider selection, model, or network activity", flush=True)
+    print("PASS: account-free UI smoke; disabled Load/Unload asserted in separate fresh viewports; "
+          "bot not started, no accounts, provider selection, model, or network activity", flush=True)
 
 if __name__ == "__main__":
     main()
