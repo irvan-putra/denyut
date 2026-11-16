@@ -6,10 +6,12 @@
 ## Evidence, separated by kind
 The initial bridge patch compiled and full assembleDebug passed under JDK21,
 Gradle8.9, AGP8.7.3, compileSdk35, with actual LiteRT-LM Android0.19.1 AAR. D8
-and APK packaging passed. Python3.12 plus real deltachat2/full rpc-server2.58.0
-ran 47 tests successfully, including six synthetic local bridge checks.
-The manual Java boundary harness passed against the actual AAR classpath;
-it did not initialize a real native engine. This harness is not wired into CI.
+and APK packaging passed. Python3.12 plus the real deltachat2/full rpc-server2.58.0
+dependency were installed; 47 tests passed. The suite also includes a host-only
+adapter test that swaps a stub into `sys.modules`. Six new bridge checks used a
+synthetic runtime; neither these tests nor the manual Java boundary harness
+initialize or exercise real native inference. The harness passed against the
+actual AAR classpath but is not wired into CI.
 
 An independent static review read all eight initial files and pinned dependency
 metadata. That review did not build or run native inference. It confirmed no
