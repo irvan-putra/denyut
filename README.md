@@ -70,6 +70,9 @@ Denyut's own code is MIT (see LICENSE). The bundled DeltaChat core stays MPL-2.0
 
 ## Research notes
 
+- [Android emulator in GitHub Actions: documented setup facts](docs/research/android-emulator-in-github-actions-setup-facts.md) - documentation-only notes on runner acceleration and emulator setup; nothing was run for this note.
+- [AOSP iptables: how interface negation prints](docs/research/aosp-iptables-listing-format-for-firewall-checks.md) - source reading at one AOSP tag; no device test or shipped-variant claim.
+
 - [Android background bot constraints](docs/research/android-background-bot-constraints.md) - official Android documentation notes on executable loading, foreground-service time limits and background starts; no device test or service-type choice claimed.
 - [Cloud options for Android testing](docs/research/cloud-android-test-options.md) - dated public prices and limits checked 2026-11-16; not quotes or reservations.
 - [Small local model and low-cost provider options](docs/research/small-local-model-options.md) - source notes on a local model candidate, a llama.cpp route, and provider-side cost controls; no phone performance claims.
