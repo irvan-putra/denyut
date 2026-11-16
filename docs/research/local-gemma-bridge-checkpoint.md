@@ -64,11 +64,11 @@ Next: synthetic success-path import tests, owner-only model routing and nonblock
 command dispatch, then UI pixel/runtime check and actual model trial if approved.
 
 ## Sources
-https://github.com/google-ai-edge/LiteRT-LM/blob/v0.19.1/kotlin/java/com/google/ai/edge/litertlm/Engine.kt
-https://github.com/google-ai-edge/LiteRT-LM/blob/v0.19.1/kotlin/java/com/google/ai/edge/litertlm/Config.kt
-https://github.com/google-ai-edge/LiteRT-LM/blob/v0.19.1/kotlin/java/com/google/ai/edge/litertlm/Conversation.kt
-https://github.com/google-ai-edge/LiteRT-LM/blob/v0.19.1/kotlin/java/com/google/ai/edge/litertlm/Message.kt
-https://dl.google.com/dl/android/maven2/com/google/ai/edge/litertlm/litertlm-android/0.19.1/litertlm-android-0.19.1.pom
-https://huggingface.co/api/models/litert-community/gemma-4-E2B-it-litert-lm?blobs=true
-https://ai.google.dev/gemma/docs/core
-https://ai.google.dev/gemma/apache_2
+- https://github.com/google-ai-edge/LiteRT-LM/blob/v0.19.1/kotlin/java/com/google/ai/edge/litertlm/Engine.kt
+- https://github.com/google-ai-edge/LiteRT-LM/blob/v0.19.1/kotlin/java/com/google/ai/edge/litertlm/Config.kt
+- https://github.com/google-ai-edge/LiteRT-LM/blob/v0.19.1/kotlin/java/com/google/ai/edge/litertlm/Conversation.kt
+- https://github.com/google-ai-edge/LiteRT-LM/blob/v0.19.1/kotlin/java/com/google/ai/edge/litertlm/Message.kt
+- https://dl.google.com/dl/android/maven2/com/google/ai/edge/litertlm/litertlm-android/0.19.1/litertlm-android-0.19.1.pom
+- https://huggingface.co/api/models/litert-community/gemma-4-E2B-it-litert-lm?blobs=true
+- https://ai.google.dev/gemma/docs/core
+- https://ai.google.dev/gemma/apache_2
