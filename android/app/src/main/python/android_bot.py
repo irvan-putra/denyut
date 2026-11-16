@@ -167,7 +167,7 @@ def invite_link(accounts_dir, rpc_server=None):
         return rpc.get_chat_securejoin_qr_code(accids[0], None)
 
 
-def _make_hooks(assistant, rpc_ref):
+def _make_hooks(assistant, rpc_ref, local_route=None):
     from deltachat2 import MessageData, events
 
     hooks = events.HookCollection()
@@ -176,6 +176,16 @@ def _make_hooks(assistant, rpc_ref):
     def on_message(bot, accid, event):
         text = (event.msg.text or "").strip()
         if not text:
+            return
+        # Preserve core confirmation semantics and non-owner help behavior.
+        # Pending skill answers must never be consumed as model prompts.
+        if (local_route is not None and not text.startswith("/")
+                and str(event.msg.from_id) not in assistant._pending
+                and local_route.owns_message(accid, event.msg)):
+            reply = local_route.offer(bot.rpc, accid, event.msg,
+                    lambda account, chat, text: bot.rpc.send_msg(account, chat, MessageData(text=text)))
+            if reply is not None:
+                bot.rpc.send_msg(accid, event.msg.chat_id, MessageData(text=reply))
             return
         reply = assistant.handle(text, sender=str(event.msg.from_id))
         bot.rpc.send_msg(accid, event.msg.chat_id, MessageData(text=reply))
@@ -215,6 +225,12 @@ def serve(accounts_dir, store_dir, rpc_server=None):
     # in CI run 43681839133). behavior.json sits next to this module.
     behavior = os.path.join(os.path.dirname(__file__), "behavior.json")
     assistant = Assistant(behavior_path=behavior, store_dir=store_dir)
+    # Optional Android local trial, unloaded by default. Never a remote fallback.
+    from denyut.local_android import LocalAndroidBackend
+    # The command Assistant remains model-free. Model work never mutates its
+    # history/skills from a background thread. Owner binding starts EMPTY.
+    from local_model_route import LocalModelRoute
+    local_route = LocalModelRoute(LocalAndroidBackend(), assistant.system_prompt)
     _set("starting")
     try:
         with IOTransport(accounts_dir=accounts_dir,
@@ -238,7 +254,8 @@ def serve(accounts_dir, store_dir, rpc_server=None):
                           flush=True)
                 if _stop.is_set():
                     return
-            bot = Bot(rpc, _make_hooks(assistant, rpc))
+            _rpc_holder["local_model_route"] = local_route
+            bot = Bot(rpc, _make_hooks(assistant, rpc, local_route))
             threading.Thread(target=_reminder_loop, args=(assistant, rpc),
                              daemon=True).start()
             _set("running")
@@ -246,6 +263,8 @@ def serve(accounts_dir, store_dir, rpc_server=None):
     except Exception as e:
         _set("error", repr(e))
     finally:
+        local_route.close()
+        _rpc_holder.pop("local_model_route", None)
         _rpc_holder.pop("rpc", None)
         if _state["status"] not in ("error",):
             _set("stopped")
@@ -253,9 +272,41 @@ def serve(accounts_dir, store_dir, rpc_server=None):
 
 def stop():
     _stop.set()
+    route = _rpc_holder.get("local_model_route")
+    if route is not None:
+        route.close()
     rpc = _rpc_holder.get("rpc")
     if rpc is not None:
         try:
             rpc.stop_io_for_all_accounts()
         except Exception:
             logger.exception("stop_io")
+
+
+def local_owner_choices():
+    """Read-only owner-device picker API. Never registered as a chat command."""
+    import json
+    route = _rpc_holder.get("local_model_route")
+    rpc = _rpc_holder.get("rpc")
+    if route is None or rpc is None:
+        return "[]"
+    return json.dumps(route.owner_choices(rpc))
+
+
+def select_local_owner(token):
+    """Device confirmation API for a current verified choice. Session only."""
+    route = _rpc_holder.get("local_model_route")
+    rpc = _rpc_holder.get("rpc")
+    if route is None or rpc is None:
+        return False
+    try:
+        route.select_owner(rpc, str(token))
+        return True
+    except Exception:
+        return False
+
+
+def revoke_local_owner():
+    route = _rpc_holder.get("local_model_route")
+    if route is not None:
+        route.revoke()

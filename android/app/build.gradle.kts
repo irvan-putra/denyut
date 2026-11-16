@@ -57,3 +57,20 @@ chaquopy {
         }
     }
 }
+
+// Pinned Android runtime only. No model weights or downloader are bundled.
+dependencies {
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.19.1")
+}
+
+// Runtime API is pre-1.0. Review and rebuild on every dependency change.
+dependencies {
+    constraints {
+        implementation("com.google.code.gson:gson:2.14.0") { version { strictly("2.14.0") } }
+        implementation("org.jetbrains.kotlin:kotlin-reflect:2.4.0") { version { strictly("2.4.0") } }
+        implementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.0") { version { strictly("2.4.0") } }
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0") { version { strictly("1.11.0") } }
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0") { version { strictly("1.11.0") } }
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0") { version { strictly("1.11.0") } }
+    }
+}

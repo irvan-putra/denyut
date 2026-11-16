@@ -33,17 +33,23 @@ No app license change or model binary redistribution.
 - A 4000-character guard was too loose for a 1024-token total budget. Reduced to
   1500 characters as a conservative trial cap, NOT a tokenizer guarantee. Native
   overflow still fails locally; no remote fallback.
-- Native generation is synchronous and has no proven wall-clock timeout. Bot
-  event dispatch must not stall deterministic commands. Actual dependency source
-  is being inspected; safe asynchronous routing is not yet implemented/verified.
-- Once active, arbitrary bot contacts must not be allowed to consume local CPU.
-  Owner-only sender/account binding is not yet implemented. Activation is gated
-  off until that boundary and asynchronous dispatch are reviewed and tested.
-- Initial tests only rejected invalid import. Tiny synthetic successful import,
-  hash match/rename and injected metadata tests are still required before import
-  can be called verified. The existing whole-file load hash is slow but explicit.
+- Native generation is synchronous and has no proven wall-clock timeout. The
+  combined draft routes it through a single worker so deterministic command
+  handling is not tied to inference completion, and adds a synthetic blocked-
+  transport test. This does not establish a runtime timeout or Android behavior.
+- The draft includes session-only owner/account/chat binding and fresh peer
+  verification; host tests exercise synthetic RPC shapes. The owner-picker and
+  real-device path are not runtime-verified. Activation remains false.
+- Java boundary checks now cover a tiny synthetic import, hash/rename, failure
+  preservation and cancellation. Those are small fixtures, not the real model;
+  the full-file hash of the 2.59 GB artifact was not computed here.
 - Runtime0.19.1 is pre-1.0; API/version changes require recompile and review.
-  Transitive dependency locking still needed before release.
+  Transitive dependency locking still needed before release. The local follow-up
+  adds a bundled, in-app readable copy of the versioned AAR LICENSE and
+  THIRD_PARTY_NOTICE.txt. It loads the asset off the UI thread and shows bounded
+  pages so the full bundle is accessible without placing all of it in one view;
+  its dependency notices must be regenerated/reviewed
+  when upgrading LiteRT-LM. This is not a release inventory for other app parts.
 - Native memory failure can kill the process, including the bot. This is a trial,
   not an unattended reliable assistant. Existing sender authorization/reminder
   durability issues are not fixed by adding a model.
@@ -58,12 +64,14 @@ Import cancellation is cooperative; blocked provider reads and native loading
 are not guaranteed cancellable. Process death leaves no persistent opt-in.
 
 ## Sequence and next work
-Current CI uses JDK17, which rejects the runtime's Java21 classfile65. A separate
-reviewed JDK21 CI change is required after the protected command E2E test; no
-concurrent helper/workflow change is included. Only this research note can be
-published safely without affecting that test. Keep executable changes unmerged.
-Next: synthetic success-path import tests, owner-only model routing and nonblocking
-command dispatch, then UI pixel/runtime check and actual model trial if approved.
+The combined local follow-up changes both Android build workflows to JDK21,
+enables KVM for the account-free UI emulator, installs with ordinary runtime
+permission grants, and adds polled UI smoke checks plus explicit CI assertions
+that both activation gates remain false. The smoke now checks the bundled
+license text and disabled controls; it has not been dispatched or run on an
+emulator. Executable changes remain unmerged pending independent review. No
+protected chat E2E rerun, account activity, model weights or activation is part
+of this work. UI pixels and runtime behavior still require the gated review.
 
 ## Sources
 - https://github.com/google-ai-edge/LiteRT-LM/blob/v0.19.1/kotlin/java/com/google/ai/edge/litertlm/Engine.kt
