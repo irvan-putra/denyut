@@ -17,6 +17,14 @@
 
 set -u
 
+# Optional first argument: "notes-reminders" also runs the notes and
+# reminder scenario after the /echo check. No argument = echo only.
+SCENARIO="${1:-}"
+case "$SCENARIO" in
+  ""|notes-reminders) ;;
+  *) echo "CHAT FAIL: unknown scenario"; exit 1 ;;
+esac
+
 for v in DENYUT_BACKUP_B64_1 DENYUT_BACKUP_B64_2 DENYUT_BACKUP_B64_3 DENYUT_BACKUP_B64_4; do
   eval "val=\${$v:-}"
   if [ -z "$val" ]; then
@@ -112,12 +120,19 @@ echo "SETUP PASS: bot running on the restored account"
 
 echo "===== host-side /echo round trip (restored peer) ====="
 TOKEN="denyut-ci-$(date +%s)"
-python3 tools/ci-chat-test.py - - "$TOKEN" \
-  --accounts-dir "$WORK/B" --peer-address "$DENYUT_PEER_ADDRESS"
+if [ -n "$SCENARIO" ]; then
+  python3 tools/ci-chat-test.py - - "$TOKEN" \
+    --accounts-dir "$WORK/B" --peer-address "$DENYUT_PEER_ADDRESS" \
+    --scenario "$SCENARIO"
+else
+  python3 tools/ci-chat-test.py - - "$TOKEN" \
+    --accounts-dir "$WORK/B" --peer-address "$DENYUT_PEER_ADDRESS"
+fi
 result=$?
 
 if [ "$result" -eq 0 ]; then
   echo "ANDROID CHAT PASS: the app on the emulator received the /echo and its reply came back through the real message path"
+  [ -n "$SCENARIO" ] && echo "ANDROID SCENARIO PASS: $SCENARIO ran on the emulator app"
 else
   echo "ANDROID CHAT FAIL: see witness output above"
 fi

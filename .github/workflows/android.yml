@@ -32,7 +32,7 @@ jobs:
         # burn a relay account on it.
         run: |
           python3 -m pip install --quiet "deltachat2[full]==2.58.0" pytest
-          python3 -m pytest tests/test_ci_witness_offline.py tests/test_android_adapter_offline.py -q
+          python3 -m pytest tests/test_ci_witness_offline.py tests/test_android_adapter_offline.py tests/test_ci_scenario_offline.py tests/test_ci_scenario_witness_offline.py -q
       - name: Build debug APK
         working-directory: android
         run: ./gradlew :app:assembleDebug --no-daemon
@@ -112,4 +112,4 @@ jobs:
           api-level: 34
           arch: x86_64
           target: google_apis
-          script: sh tools/ci-smoke.sh && sh tools/ci-restore-chat.sh
+          script: sh tools/ci-smoke.sh && sh tools/ci-restore-chat.sh notes-reminders

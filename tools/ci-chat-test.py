@@ -19,6 +19,11 @@ the reply. Usage:
 The accounts dir and peer address arrive via protected CI secrets and
 temp files, never the public log.
 
+Optional, restore mode only: add `--scenario notes-reminders` to run, after
+the /echo check passes, a real notes create/list/archive and a reminder
+that must arrive unsolicited (see tools/ci_chat_scenario.py). The echo
+check is unchanged and still runs first.
+
 Prints "CHAT PASS" or "CHAT FAIL: <reason>" and exits 0/1.
 
 Written against deltachat2 2.58.0 API, verified from the wheel source:
@@ -42,6 +47,40 @@ import threading
 import time
 
 TOTAL_TIMEOUT = 420
+SCENARIO_TIMEOUT = 900
+
+
+def _run_scenario(rpc, accid, chat_id, incoming_type):
+    """Notes + reminders over the same established chat, same single
+    event consumer. Only the synthetic marker is ever logged."""
+    from deltachat2 import MessageData
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import ci_chat_scenario as sc
+
+    def send(text):
+        rpc.send_msg(accid, chat_id, MessageData(text=text))
+
+    def wait(pred, timeout_s):
+        end = time.time() + timeout_s
+        while time.time() < end:
+            ev = rpc.get_next_event().event
+            if not isinstance(ev, incoming_type) or ev.chat_id != chat_id:
+                continue
+            msg = rpc.transport.call("get_message", accid, ev.msg_id)
+            text = (msg.get("text") or "").strip()
+            if pred(text):
+                return text
+        return None
+
+    ok, step = sc.run(send, wait, sc.new_marker(), time.time,
+                      lambda line: print(line, flush=True))
+    if ok:
+        print("CHAT SCENARIO PASS: notes create/list/archive and an "
+              "unsolicited reminder through the bot's real message path",
+              flush=True)
+        return 0
+    print("CHAT SCENARIO FAIL: step %s" % step, flush=True)
+    return 1
 
 
 def main():
@@ -56,7 +95,19 @@ def main():
         i = argv.index("--peer-address")
         peer_address = argv[i + 1]
         del argv[i:i + 2]
+    scenario = None
+    if "--scenario" in argv:
+        i = argv.index("--scenario")
+        scenario = argv[i + 1]
+        del argv[i:i + 2]
     relay_url, invite_file, token = argv[0], argv[1], argv[2]
+    if scenario not in (None, "notes-reminders"):
+        print("CHAT FAIL: unknown scenario", flush=True)
+        return 1
+    if scenario and not restore_dir:
+        print("CHAT FAIL: --scenario requires restore mode", flush=True)
+        return 1
+    total_timeout = SCENARIO_TIMEOUT if scenario else TOTAL_TIMEOUT
 
     if restore_dir and not peer_address:
         print("CHAT FAIL: restore mode requires --peer-address", flush=True)
@@ -78,8 +129,8 @@ def main():
     # get_next_event() blocks with no timeout; a watchdog enforces the
     # overall bound so a stuck phase can never hang the CI job.
     def watchdog():
-        time.sleep(TOTAL_TIMEOUT)
-        print("CHAT FAIL: overall timeout after %ds" % TOTAL_TIMEOUT, flush=True)
+        time.sleep(total_timeout)
+        print("CHAT FAIL: overall timeout after %ds" % total_timeout, flush=True)
         os._exit(1)
 
     threading.Thread(target=watchdog, daemon=True).start()
@@ -120,7 +171,7 @@ def main():
             rpc.set_config(accid, "displayname", "Denyut CI peer")
             rpc.add_transport_from_qr(accid, "DCACCOUNT:" + relay_url)
 
-        deadline = time.time() + TOTAL_TIMEOUT
+        deadline = time.time() + total_timeout
         while time.time() < deadline:
             ev = rpc.get_next_event().event
 
@@ -157,7 +208,9 @@ def main():
                 if token in (msg.get("text") or ""):
                     print("CHAT PASS: /echo round trip through the bot's "
                           "real message path", flush=True)
-                    return 0
+                    if not scenario:
+                        return 0
+                    return _run_scenario(rpc, accid, chat_id, EventTypeIncomingMsg)
 
     print("CHAT FAIL: did not complete (phase=%s)" % phase, flush=True)
     return 1
