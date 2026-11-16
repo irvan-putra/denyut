@@ -71,3 +71,4 @@ Denyut's own code is MIT (see LICENSE). The bundled DeltaChat core stays MPL-2.0
 ## Research notes
 
 - [Small local model and low-cost provider options](docs/research/small-local-model-options.md) - source notes on a local model candidate, a llama.cpp route, and provider-side cost controls; no phone performance claims.
+- [Local Gemma bridge checkpoint](docs/research/local-gemma-bridge-checkpoint.md) - preparatory code/build evidence, independent review findings and remaining activation gates; no weights or inference proven.
