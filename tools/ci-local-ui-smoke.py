@@ -27,9 +27,31 @@ def adb(*args: str) -> str:
     return p.stdout.strip()
 
 
+LAST_XML = ""
+SWIPES = 0
+
+
 def dump() -> ET.Element:
+    global LAST_XML
     adb("shell", "uiautomator", "dump", "/sdcard/denyut-window.xml")
-    return ET.fromstring(adb("shell", "cat", "/sdcard/denyut-window.xml"))
+    LAST_XML = adb("shell", "cat", "/sdcard/denyut-window.xml")
+    return ET.fromstring(LAST_XML)
+
+
+def emit_diagnostics(reason: str) -> None:
+    """Failure-only evidence in the log (no artifact, no new assertion): the last hierarchy this script parsed,
+    the swipe count and the display size. The app is account-free and shows only fixed text."""
+    print(f"UI_DIAG_BEGIN {reason}", flush=True)
+    print(f"swipes_so_far={SWIPES}", flush=True)
+    for cmd in (("wm", "size"), ("wm", "density")):
+        try:
+            print(adb("shell", *cmd), flush=True)
+        except Exception as error:  # diagnostics must never mask the real failure
+            print(f"{cmd}: {error}", flush=True)
+    print("UI_DIAG_XML_BEGIN", flush=True)
+    print(LAST_XML, flush=True)
+    print("UI_DIAG_XML_END", flush=True)
+    print("UI_DIAG_END", flush=True)
 
 
 def wait_for(predicate, description: str, timeout: float = 30.0) -> ET.Element:
@@ -54,6 +76,7 @@ def nodes(root: ET.Element, text: str) -> list[ET.Element]:
 def assert_text(root: ET.Element, text: str) -> ET.Element:
     found = nodes(root, text)
     if not found:
+        emit_diagnostics(f"text not found: {text}")
         raise AssertionError(f"Expected visible text not found: {text}")
     return found[0]
 
@@ -68,6 +91,7 @@ def assert_contains(root: ET.Element, fragment: str) -> ET.Element:
     for node in root.iter("node"):
         if fragment in node.attrib.get("text", "") or fragment in node.attrib.get("content-desc", ""):
             return node
+    emit_diagnostics(f"fragment not found: {fragment}")
     raise AssertionError(f"Expected visible text fragment not found: {fragment}")
 
 
@@ -107,7 +131,10 @@ def scroll_until(label: str) -> ET.Element:
         if found:
             return found[0]
         adb("shell", "input", "swipe", "700", "760", "700", "240", "350")
+        global SWIPES
+        SWIPES += 1
         time.sleep(0.5)
+    emit_diagnostics(f"scroll_until timed out: {label}")
     raise AssertionError(f"UI control not reachable by polling/scrolling: {label}")
 
 
