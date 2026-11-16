@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import os
+import re
 import subprocess
 import time
 import xml.etree.ElementTree as ET
@@ -119,6 +120,24 @@ def screenshot(name: str) -> None:
     print(f"SCREENSHOT_END {path.name}", flush=True)
 
 
+def swipe_scroll_container(root: ET.Element) -> None:
+    """Swipe inside the live scrollable bounds, never at fixed screen pixels."""
+    scrollables = [node for node in root.iter("node")
+                   if node.attrib.get("scrollable") == "true"]
+    if len(scrollables) != 1:
+        raise AssertionError(f"Expected one scrollable container, found {len(scrollables)}")
+    coords = [int(value) for value in re.findall(r"-?\d+", scrollables[0].attrib.get("bounds", ""))]
+    if len(coords) != 4:
+        raise AssertionError("Invalid scrollable container bounds")
+    left, top, right, bottom = coords
+    if right - left < 3 or bottom - top < 5:
+        raise AssertionError("Scrollable container is too small for a swipe")
+    x = left + (right - left) // 2
+    start_y = top + 3 * (bottom - top) // 4
+    end_y = top + (bottom - top) // 4
+    adb("shell", "input", "swipe", str(x), str(start_y), str(x), str(end_y), "350")
+
+
 def scroll_until(label: str) -> ET.Element:
     deadline = time.monotonic() + 30.0
     while time.monotonic() < deadline:
@@ -129,8 +148,8 @@ def scroll_until(label: str) -> ET.Element:
             continue
         found = nodes(root, label)
         if found:
-            return found[0]
-        adb("shell", "input", "swipe", "700", "760", "700", "240", "350")
+            return root
+        swipe_scroll_container(root)
         global SWIPES
         SWIPES += 1
         time.sleep(0.5)
