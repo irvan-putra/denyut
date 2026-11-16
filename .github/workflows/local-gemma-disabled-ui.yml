@@ -2,6 +2,8 @@ name: Local Gemma disabled-state UI check
 
 on:
   workflow_dispatch:
+  push:
+    branches: [local-gemma-disabled-ui-20261116]
 
 permissions:
   contents: read
