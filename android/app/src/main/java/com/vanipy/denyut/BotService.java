@@ -38,7 +38,7 @@ public class BotService extends Service {
                 this, 0, openApp, PendingIntent.FLAG_IMMUTABLE);
         Notification notification =
                 new Notification.Builder(this, CHANNEL_ID)
-                        .setContentTitle("Denyut")
+                        .setContentTitle("denyut")
                         .setContentText("Assistant bot is running")
                         .setSmallIcon(android.R.drawable.ic_dialog_info)
                         .setContentIntent(pending)
