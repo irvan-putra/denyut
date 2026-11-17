@@ -51,3 +51,10 @@ Try phone-local Gemma first. Add a light always-on server only if reminders or t
 - [RunPod RTX 4090](https://www.runpod.io/gpu-models/rtx-4090)
 - [Indonesian tax office, digital services](https://pajak.go.id/en/digitaltax)
 - [Exchange rates, 13 Nov 2026](https://api.frankfurter.dev/v1/latest?base=EUR&symbols=IDR)
+
+
+## Dated cost-chart illustration
+
+![Denyut hosting-cost comparison chart in Rupiah millions, checked 16 November 2026.](../../assets/illustrations/hosting-costs-2026-11-16.png)
+
+*Dated 16 Nov 2026 hosting-only estimate. Rp millions; Indonesian tax and card fees are excluded, as are existing phone, power and data costs. This is a limited single-user Denyut setup, not an equivalent general assistant. Prices need rechecking before any decision.*
