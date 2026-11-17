@@ -46,7 +46,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: denyut-v0.6.4-debug-apk
+          name: denyut-v0.6.5-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
 
   smoke-test:
@@ -57,7 +57,7 @@ jobs:
       - name: Download APK
         uses: actions/download-artifact@v4
         with:
-          name: denyut-v0.6.4-debug-apk
+          name: denyut-v0.6.5-debug-apk
           path: apk
       # GitHub-hosted ubuntu-latest runners expose /dev/kvm but the runner
       # user is not always in the kvm group; this udev rule is the standard
@@ -100,7 +100,7 @@ jobs:
       - name: Download APK
         uses: actions/download-artifact@v4
         with:
-          name: denyut-v0.6.4-debug-apk
+          name: denyut-v0.6.5-debug-apk
           path: apk
       - name: Enable KVM
         run: |
