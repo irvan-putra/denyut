@@ -375,14 +375,27 @@ def inspect_disabled_controls(font_tag: str) -> None:
     heading_root = scroll_until("Optional local Gemma (experimental)",
                                 contains_fragment=True)
     assert_contains(heading_root, "Optional local Gemma (experimental)")
-    labels = ("Select existing verified owner contact", "Choose downloaded model file",
-              "Load local model", "Unload local model", "Cancel file import")
+    # "Revoke model owner access" has no disabled state to assert, but it is
+    # still sought so every local-model control gets an exposed-bounds
+    # reachability check at each font scale.
+    labels = ("Select existing verified owner contact", "Revoke model owner access",
+              "Choose downloaded model file", "Load local model",
+              "Unload local model", "Cancel file import")
+    last_capture_xml: str | None = None
     for label in labels:
         CURRENT_LABEL = label
         root = scroll_until(label, require_fully_visible=True)
         assert_text(root, label)
         if label in ("Load local model", "Unload local model"):
             assert_disabled(root, label)
+            if LAST_XML == last_capture_xml:
+                # The accessibility hierarchy is unchanged since the previous
+                # capture, so this capture may show the same viewport. Say so
+                # in the log so a repeated-looking PNG is not misread as
+                # independent evidence or a stalled scroll.
+                print(f"NOTE: accessibility hierarchy unchanged; {label!r} "
+                      "capture may show the same viewport", flush=True)
+            last_capture_xml = LAST_XML
             screenshot(f"{label.lower().replace(' ', '-')}-disabled-{font_tag}-font")
 
 
@@ -404,6 +417,14 @@ def main() -> None:
     for label in ("Start bot", "Stop bot", "Run self-test"):
         assert_text(root, label)
     screenshot("main-top-normal-font")
+    # The list can be taller than one viewport, so this scroll-origin frame
+    # can clip lower content. Whether that clipping is only capture position
+    # is a pixel-review question: the harness separately checks each control's
+    # exposed bounds and reachability, but an exposed >=48dp region can still
+    # be the clipped portion of a taller control.
+    print("NOTE: this scroll-origin frame can clip lower content; per-control "
+          "exposed bounds/reachability are checked separately, pixels still need review",
+          flush=True)
 
     # Inspect the disabled-model heading and each control in its own fresh viewport.
     inspect_disabled_controls("normal")
