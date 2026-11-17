@@ -10,13 +10,7 @@ or another channel can drive the same `Assistant` class later.
 
 ## Android app
 
-No APK has been published yet. When a release exists it will be a direct
-GitHub release asset (`denyut-vX.Y.Z.apk`, arm64 phones); see the Releases
-page. The app runs the DeltaChat bot on the phone: notes and reminders work
-offline with no model. The local Gemma model path ships disabled and
-unverified on real phones; there is no cloud fallback. Builds come from the
-manual `sign test apk` workflow (tests and Gradle run without secrets; a
-separate minimal job signs the unsigned APK).
+The signed Android v0.6.4 test APK is published as a direct [GitHub release asset](https://github.com/irvan-putra/denyut/releases/download/v0.6.4/denyut-v0.6.4.apk) (`denyut-v0.6.4.apk`, for arm64 phones); see the [release page](https://github.com/irvan-putra/denyut/releases/tag/v0.6.4). The app runs the DeltaChat bot on the phone: notes and reminders work offline with no model. Local-model loading is disabled in this build and has not been validated on real phones; there is no cloud fallback. Builds come from the manual `sign test apk` workflow, which tests without secrets before a separate minimal signing job.
 
 ## Layout
 
