@@ -59,7 +59,7 @@ jobs:
           curl -sL -o /tmp/g.zip https://services.gradle.org/distributions/gradle-8.9-bin.zip
           echo "d725d707bfabd4dfdc958c624003b3c80accc03f7037b5122c4b1d0ef15cecab  /tmp/g.zip" | sha256sum -c -
           unzip -q /tmp/g.zip -d /tmp
-      - name: Qualify exact commit (local-model gates, full python suite, notice-page host test)
+      - name: Qualify exact commit (local-model gates, full python suite, notice-page host test, local-model Java boundary harness)
         run: |
           set -euo pipefail
           python3 -m pip install --quiet "deltachat2[full]==2.58.0" pytest
@@ -68,6 +68,7 @@ jobs:
           mkdir -p /tmp/notice-page-tests
           javac -d /tmp/notice-page-tests android/app/src/main/java/com/vanipy/denyut/NoticePages.java tests/java/NoticePagesTest.java
           java -ea -cp /tmp/notice-page-tests com.vanipy.denyut.NoticePagesTest
+          bash tools/check-java-boundary.sh
           echo "denyut gating tests passed (gates script, full pytest suite, notice-page host test)" > test-summary.txt
       - name: Build unsigned release
         run: (cd android && /tmp/gradle-8.9/bin/gradle --no-daemon "-PversionName=$EXPECTED_VERSION_NAME" "-PversionCode=$EXPECTED_VERSION_CODE" :app:assembleRelease)
