@@ -8,6 +8,16 @@ First channel: a **DeltaChat bot** (its own chatmail account, reachable only
 via its invite QR code). The core is transport-agnostic, so an Android app
 or another channel can drive the same `Assistant` class later.
 
+## Android app
+
+No APK has been published yet. When a release exists it will be a direct
+GitHub release asset (`denyut-vX.Y.Z.apk`, arm64 phones); see the Releases
+page. The app runs the DeltaChat bot on the phone: notes and reminders work
+offline with no model. The local Gemma model path ships disabled and
+unverified on real phones; there is no cloud fallback. Builds come from the
+manual `sign test apk` workflow (tests and Gradle run without secrets; a
+separate minimal job signs the unsigned APK).
+
 ## Layout
 
 - `denyut/core.py` — message routing: commands, skills, model fallback,
