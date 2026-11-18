@@ -11,8 +11,8 @@ android {
         applicationId = "com.vanipy.denyut"
         minSdk = 24
         targetSdk = 35
-        versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 5
-        versionName = (project.findProperty("versionName") as String?) ?: "0.6.5"
+        versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 6
+        versionName = (project.findProperty("versionName") as String?) ?: "0.7.0"
 
         ndk {
             // arm64-v8a only (modern mid-range phones are arm64), and CI runs the
@@ -26,6 +26,13 @@ android {
     buildFeatures {
         // BuildConfig is needed for the DEBUG gate on the autostart hook.
         buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all { it.systemProperty("robolectric.graphicsMode", "NATIVE") }
+        }
     }
 
     // The rpc-server binary must be extracted to disk at install time so it
@@ -61,6 +68,8 @@ chaquopy {
 // Pinned Android runtime only. No model weights or downloader are bundled.
 dependencies {
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.19.1")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1") // test-only, not in the APK
 }
 
 // Runtime API is pre-1.0. Review and rebuild on every dependency change.

@@ -43,6 +43,17 @@ public class MainActivity extends Activity {
         layout.addView(startBtn);
         layout.addView(stopBtn);
         layout.addView(selftestBtn);
+        Button demoBtn = new Button(this);
+        demoBtn.setText(DemoMode.isOn(this)
+                ? "Widget demo data: ON (made-up) - tap to switch back"
+                : "Widget demo data: OFF - tap to show made-up data");
+        demoBtn.setOnClickListener(v -> {
+            DemoMode.set(this, !DemoMode.isOn(this));
+            demoBtn.setText(DemoMode.isOn(this)
+                    ? "Widget demo data: ON (made-up) - tap to switch back"
+                    : "Widget demo data: OFF - tap to show made-up data");
+        });
+        layout.addView(demoBtn);
         localControls = new LocalModelControls(this, layout);
         Button noticesBtn = new Button(this);
         noticesBtn.setText("Third-party licenses and notices");

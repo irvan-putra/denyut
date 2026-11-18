@@ -43,10 +43,20 @@ jobs:
       - name: Build debug APK
         working-directory: android
         run: ./gradlew :app:assembleDebug --no-daemon
+      - name: Widget render tests
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+      - name: Upload widget snapshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: denyut-widget-snapshots
+          path: android/app/build/widget-snapshots/*.png
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: denyut-v0.6.5-debug-apk
+          name: denyut-v0.7.0-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
 
   smoke-test:
@@ -57,7 +67,7 @@ jobs:
       - name: Download APK
         uses: actions/download-artifact@v4
         with:
-          name: denyut-v0.6.5-debug-apk
+          name: denyut-v0.7.0-debug-apk
           path: apk
       # GitHub-hosted ubuntu-latest runners expose /dev/kvm but the runner
       # user is not always in the kvm group; this udev rule is the standard
@@ -100,7 +110,7 @@ jobs:
       - name: Download APK
         uses: actions/download-artifact@v4
         with:
-          name: denyut-v0.6.5-debug-apk
+          name: denyut-v0.7.0-debug-apk
           path: apk
       - name: Enable KVM
         run: |
