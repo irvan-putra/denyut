@@ -184,7 +184,7 @@ public class WidgetRenderTest {
                     options.putInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, height);
                     RemoteViews rv = DenyutWidgetProvider.buildViews(c, options);
                     if (width < 240) rv.setTextViewText(R.id.widget_reminder_due,
-                        height < 110 ? "in 1h 16m\n17:30 · 6 notes" : "in 1h 16m\nat 17:30");
+                        height < Math.max(110, Math.round(140 * scale)) ? "in 1h 16m\n17:30 · 6 notes" : "in 1h 16m\nat 17:30");
                     View v = rv.apply(c, new FrameLayout(c));
                     v.measure(View.MeasureSpec.makeMeasureSpec(W, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(H, View.MeasureSpec.EXACTLY));
                     v.layout(0, 0, W, H);

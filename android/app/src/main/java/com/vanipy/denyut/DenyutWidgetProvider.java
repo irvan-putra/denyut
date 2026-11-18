@@ -35,7 +35,8 @@ public class DenyutWidgetProvider extends AppWidgetProvider {
     static RemoteViews buildViews(Context c, Bundle options) {
         int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 48);
         int width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 48);
-        return buildViews(c, height < 110, width < 100, width < 240);
+        float fontScale = c.getResources().getConfiguration().fontScale;
+        return buildViews(c, height < Math.max(110, Math.round(140 * fontScale)), width < 100, width < 240);
     }
 
     static RemoteViews buildViews(Context c) { return buildViews(c, false); }
