@@ -20,8 +20,8 @@ env:
   # SET in the release commit: 64 uppercase hex digits of the key certificate. Not a secret.
   EXPECTED_CERT_SHA256: 59A6ADB54F51665F44E5AEA388FFAC15661D4362B7F619CEA6A90BF91ED467F7
   # SET per release in the release commit: must equal the gradle defaults, tools/icon-version.txt and the icon badge.
-  EXPECTED_VERSION_NAME: '0.7.2'
-  EXPECTED_VERSION_CODE: '8'
+  EXPECTED_VERSION_NAME: '0.7.3'
+  EXPECTED_VERSION_CODE: '9'
   EXPECTED_PACKAGE: com.vanipy.denyut
   EXPECTED_LABEL: denyut
   BUILD_TOOLS_VERSION: 34.0.0
