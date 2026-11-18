@@ -63,8 +63,12 @@ public class DenyutWidgetProvider extends AppWidgetProvider {
     }
 
     private static String formatDue(long dueMs) {
-        long now = System.currentTimeMillis();
-        long left = dueMs - now;
+        return formatDue(dueMs, System.currentTimeMillis());
+    }
+
+    /** All times are epoch millis; countdown is absolute and the clock time renders in the device default timezone. */
+    static String formatDue(long dueMs, long nowMs) {
+        long left = dueMs - nowMs;
         if (left <= 0) return "due now";
         long days = left / 86_400_000L;
         Date d = new Date(dueMs);
