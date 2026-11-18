@@ -44,7 +44,7 @@ public class DenyutWidgetProvider extends AppWidgetProvider {
     static RemoteViews buildViews(Context c, boolean compact, boolean tiny) {
         RemoteViews v = new RemoteViews(c.getPackageName(), tiny ? R.layout.widget_denyut_tiny : compact ? R.layout.widget_denyut_compact : R.layout.widget_denyut);
         boolean demo = DemoMode.isOn(c);
-        v.setViewVisibility(R.id.widget_demo_badge, demo ? View.VISIBLE : View.GONE);
+        v.setViewVisibility(R.id.widget_demo_badge, View.GONE);
 
         String reminderText;
         long dueMs;
