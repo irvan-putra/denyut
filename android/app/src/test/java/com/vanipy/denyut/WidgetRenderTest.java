@@ -79,6 +79,44 @@ public class WidgetRenderTest {
     }
 
     @Test
+    public void widgetDemoHidesRealStore() throws Exception {
+        Context c = RuntimeEnvironment.getApplication();
+        // Real store present with real-looking content...
+        widgetReadsRealStoreFixture(c);
+        // ...but demo mode must show only the made-up data.
+        DemoMode.set(c, true);
+        FrameLayout parent = new FrameLayout(c);
+        View v = DenyutWidgetProvider.buildViews(c).apply(c, parent);
+        android.widget.TextView reminder = v.findViewById(R.id.widget_reminder);
+        android.widget.TextView badge = v.findViewById(R.id.widget_demo_badge);
+        android.widget.TextView notes = v.findViewById(R.id.widget_notes);
+        assertEquals(DemoData.reminderText(), reminder.getText().toString());
+        assertEquals(View.VISIBLE, badge.getVisibility());
+        assertEquals(DemoData.notes().size() + " notes open", notes.getText().toString());
+        c.getSharedPreferences("denyut_prefs", Context.MODE_PRIVATE).edit().clear().commit();
+        new File(c.getFilesDir(), "store/notes.json").delete();
+        new File(c.getFilesDir(), "store/reminders.json").delete();
+    }
+
+    private void widgetReadsRealStoreFixture(Context c) throws Exception {
+        File store = new File(c.getFilesDir(), "store");
+        store.mkdirs();
+        JSONObject perSender = new JSONObject()
+                .put("pending", new org.json.JSONArray().put(new JSONObject()
+                        .put("text", "Real private reminder").put("due", 4_000_000_000L)))
+                .put("done", new org.json.JSONArray());
+        try (FileWriter w = new FileWriter(new File(store, "reminders.json"))) {
+            w.write(new JSONObject().put("owner@test", perSender).toString());
+        }
+        JSONObject notesPer = new JSONObject()
+                .put("open", new org.json.JSONArray().put("real private note"))
+                .put("archived", new org.json.JSONArray());
+        try (FileWriter w = new FileWriter(new File(store, "notes.json"))) {
+            w.write(new JSONObject().put("owner@test", notesPer).toString());
+        }
+    }
+
+    @Test
     public void widgetEmptyStore() throws Exception {
         Context c = RuntimeEnvironment.getApplication();
         new File(c.getFilesDir(), "store/notes.json").delete();
