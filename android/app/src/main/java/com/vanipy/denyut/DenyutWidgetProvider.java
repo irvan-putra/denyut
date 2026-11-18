@@ -77,7 +77,7 @@ public class DenyutWidgetProvider extends AppWidgetProvider {
 
         if (tiny) {
             v.setContentDescription(R.id.widget_root, "denyut: " + (reminderText == null ? "No pending reminder" : reminderText + ", " + formatDue(dueMs)) + ". " + noteText);
-            v.setTextViewText(R.id.widget_reminder, String.valueOf(notes));
+            v.setTextViewText(R.id.widget_reminder, notes > 999 ? "999+" : String.valueOf(notes));
             v.setTextViewText(R.id.widget_reminder_due, "notes");
         }
 
