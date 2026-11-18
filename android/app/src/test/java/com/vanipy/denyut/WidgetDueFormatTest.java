@@ -41,7 +41,7 @@ public class WidgetDueFormatTest {
         Calendar c = Calendar.getInstance();
         c.clear();
         c.set(year, month, day, hour, minute);
-        return c.getTimeMillis();
+        return c.getTimeInMillis();
     }
 
     private static String jakartaClock(long ms) {
