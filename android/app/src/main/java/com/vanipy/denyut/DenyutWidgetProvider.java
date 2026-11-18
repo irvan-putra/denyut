@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.text.format.DateFormat;
 import android.view.View;
+import android.os.Bundle;
 import android.widget.RemoteViews;
 import java.util.Date;
 import java.util.List;
@@ -17,17 +18,31 @@ public class DenyutWidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager mgr, int[] appWidgetIds) {
-        for (int id : appWidgetIds) mgr.updateAppWidget(id, buildViews(context));
+        for (int id : appWidgetIds) mgr.updateAppWidget(id, buildViews(context, mgr.getAppWidgetOptions(id)));
     }
 
     public static void updateAll(Context context) {
         AppWidgetManager mgr = AppWidgetManager.getInstance(context);
         int[] ids = mgr.getAppWidgetIds(new ComponentName(context, DenyutWidgetProvider.class));
-        for (int id : ids) mgr.updateAppWidget(id, buildViews(context));
+        for (int id : ids) mgr.updateAppWidget(id, buildViews(context, mgr.getAppWidgetOptions(id)));
     }
 
-    static RemoteViews buildViews(Context c) {
-        RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_denyut);
+    @Override
+    public void onAppWidgetOptionsChanged(Context c, AppWidgetManager mgr, int id, Bundle options) {
+        mgr.updateAppWidget(id, buildViews(c, options));
+    }
+
+    static RemoteViews buildViews(Context c, Bundle options) {
+        int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 48);
+        return buildViews(c, height < 110, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 48) < 150);
+    }
+
+    static RemoteViews buildViews(Context c) { return buildViews(c, false); }
+
+    static RemoteViews buildViews(Context c, boolean compact) { return buildViews(c, compact, false); }
+
+    static RemoteViews buildViews(Context c, boolean compact, boolean tiny) {
+        RemoteViews v = new RemoteViews(c.getPackageName(), tiny ? R.layout.widget_denyut_tiny : compact ? R.layout.widget_denyut_compact : R.layout.widget_denyut);
         boolean demo = DemoMode.isOn(c);
         v.setViewVisibility(R.id.widget_demo_badge, demo ? View.VISIBLE : View.GONE);
 
@@ -53,8 +68,18 @@ public class DenyutWidgetProvider extends AppWidgetProvider {
             v.setTextViewText(R.id.widget_reminder, reminderText);
             v.setTextViewText(R.id.widget_reminder_due, formatDue(dueMs));
         }
-        v.setTextViewText(R.id.widget_notes,
-                notes == 1 ? "1 note open" : notes + " notes open");
+        String noteText = notes == 1 ? "1 note open" : notes + " notes open";
+        v.setTextViewText(R.id.widget_notes, noteText);
+        if (compact) {
+            String due = reminderText == null ? "Ask denyut with /remind" : formatDue(dueMs);
+            v.setTextViewText(R.id.widget_reminder_due, due + " · " + noteText);
+        }
+
+        if (tiny) {
+            v.setContentDescription(R.id.widget_root, "denyut: " + (reminderText == null ? "No pending reminder" : reminderText + ", " + formatDue(dueMs)) + ". " + noteText);
+            v.setTextViewText(R.id.widget_reminder, String.valueOf(notes));
+            v.setTextViewText(R.id.widget_reminder_due, "notes");
+        }
 
         PendingIntent pi = PendingIntent.getActivity(c, 0,
                 new Intent(c, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
