@@ -34,15 +34,23 @@ public class DenyutWidgetProvider extends AppWidgetProvider {
 
     static RemoteViews buildViews(Context c, Bundle options) {
         int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 48);
-        return buildViews(c, height < 110, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 48) < 100);
+        int width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 48);
+        return buildViews(c, height < 110, width < 100, width < 240);
     }
 
     static RemoteViews buildViews(Context c) { return buildViews(c, false); }
 
     static RemoteViews buildViews(Context c, boolean compact) { return buildViews(c, compact, false); }
 
-    static RemoteViews buildViews(Context c, boolean compact, boolean tiny) {
+    static RemoteViews buildViews(Context c, boolean compact, boolean tiny) { return buildViews(c, compact, tiny, false); }
+
+    static RemoteViews buildViews(Context c, boolean compact, boolean tiny, boolean narrow) {
         RemoteViews v = new RemoteViews(c.getPackageName(), tiny ? R.layout.widget_denyut_tiny : compact ? R.layout.widget_denyut_compact : R.layout.widget_denyut);
+        if (narrow && !compact && !tiny) {
+            int pad = Math.round(10 * c.getResources().getDisplayMetrics().density);
+            v.setViewPadding(R.id.widget_root, pad, pad, pad, pad);
+            v.setTextViewTextSize(R.id.widget_reminder, android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+        }
         boolean demo = DemoMode.isOn(c);
         v.setViewVisibility(R.id.widget_demo_badge, View.GONE);
 
@@ -66,13 +74,19 @@ public class DenyutWidgetProvider extends AppWidgetProvider {
             v.setTextViewText(R.id.widget_reminder_due, "Ask denyut for one with /remind");
         } else {
             v.setTextViewText(R.id.widget_reminder, reminderText);
-            v.setTextViewText(R.id.widget_reminder_due, formatDue(dueMs));
+            v.setTextViewText(R.id.widget_reminder_due, narrow ? formatNarrowDue(dueMs, System.currentTimeMillis()) : formatDue(dueMs));
         }
         String noteText = notes == 1 ? "1 note open" : notes + " notes open";
         v.setTextViewText(R.id.widget_notes, noteText);
         if (compact) {
             String due = reminderText == null ? "Ask denyut with /remind" : formatDue(dueMs);
-            v.setTextViewText(R.id.widget_reminder_due, due + " · " + noteText);
+            if (narrow) {
+                String narrowDue = reminderText == null ? "Ask /remind" : formatNarrowDue(dueMs, System.currentTimeMillis()).replace("\nat ", "\n");
+                v.setTextViewText(R.id.widget_reminder_due, narrowDue + " · " + notes + (notes == 1 ? " note" : " notes"));
+                v.setViewPadding(R.id.widget_root, 4, 4, 4, 4);
+            } else {
+                v.setTextViewText(R.id.widget_reminder_due, due + " · " + noteText);
+            }
         }
 
         if (tiny) {
@@ -85,6 +99,20 @@ public class DenyutWidgetProvider extends AppWidgetProvider {
                 new Intent(c, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
         v.setOnClickPendingIntent(R.id.widget_root, pi);
         return v;
+    }
+
+    /** Put the clock on its own line instead of losing it to ellipsis on narrow hosts. */
+    static String formatNarrowDue(long dueMs, long nowMs) {
+        long left = dueMs - nowMs;
+        String clock = DateFormat.format("HH:mm", new Date(dueMs)).toString();
+        if (left <= 0) return "due now\nat " + clock;
+        long days = left / 86_400_000L;
+        long hours = left / 3_600_000L;
+        long minutes = Math.max(1, (left % 3_600_000L) / 60_000L);
+        String countdown = days >= 1 ? "in " + days + "d " + (hours % 24) + "h"
+                : hours > 0 ? "in " + hours + "h " + ((left % 3_600_000L) / 60_000L) + "m"
+                : "in " + minutes + "m";
+        return countdown + "\nat " + clock;
     }
 
     private static String formatDue(long dueMs) {

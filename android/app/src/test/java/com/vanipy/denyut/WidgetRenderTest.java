@@ -165,4 +165,43 @@ public class WidgetRenderTest {
         new File(c.getFilesDir(), "store/reminders.json").delete();
         snapshot(DenyutWidgetProvider.buildViews(c), c, "widget-empty.png");
     }
+    @Test
+    @Config(qualifiers = "mdpi")
+    public void narrowClockAndCountdownHaveNoEllipsisOrClipping() throws Exception {
+        Context base = RuntimeEnvironment.getApplication();
+        for (float scale : new float[]{1f, 1.3f, 1.5f}) {
+            android.content.res.Configuration config = new android.content.res.Configuration(base.getResources().getConfiguration());
+            config.fontScale = scale;
+            Context c = base.createConfigurationContext(config);
+            DemoMode.set(c, true);
+            for (int width : new int[]{130, 160, 203, 260, 350}) {
+                for (int height : new int[]{80, 180, 280}) {
+                    // The 80dp strip is qualified at normal and 1.3x font; larger fonts need a taller host.
+                    if (height == 80 && scale > 1.3f) continue;
+                    W = width; H = height;
+                    android.os.Bundle options = new android.os.Bundle();
+                    options.putInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, width);
+                    options.putInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, height);
+                    RemoteViews rv = DenyutWidgetProvider.buildViews(c, options);
+                    if (width < 240) rv.setTextViewText(R.id.widget_reminder_due,
+                        height < 110 ? "in 1h 16m\n17:30 · 6 notes" : "in 1h 16m\nat 17:30");
+                    View v = rv.apply(c, new FrameLayout(c));
+                    v.measure(View.MeasureSpec.makeMeasureSpec(W, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(H, View.MeasureSpec.EXACTLY));
+                    v.layout(0, 0, W, H);
+                    android.widget.TextView due = v.findViewById(R.id.widget_reminder_due);
+                    android.text.Layout layout = due.getLayout();
+                    assertNotNull(layout);
+                    String label = width + "x" + height + " font=" + scale;
+                    for (int line = 0; line < layout.getLineCount(); line++) assertEquals(label, 0, layout.getEllipsisCount(line));
+                    assertEquals(label, due.getText().length(), layout.getLineEnd(layout.getLineCount()-1));
+                    assertTrue(label + " due bottom", due.getBottom() <= H - v.getPaddingBottom());
+                    if (width < 240) assertTrue(label, due.getText().toString().contains("17:30"));
+                    android.widget.TextView notes = v.findViewById(R.id.widget_notes);
+                    if (notes.getVisibility() == View.VISIBLE) assertTrue(label + " notes bottom", notes.getBottom() <= H - v.getPaddingBottom());
+                    snapshot(rv, c, "time-" + label.replace(' ', '-') + ".png");
+                }
+            }
+        }
+        DemoMode.set(base, false);
+    }
 }

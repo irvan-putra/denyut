@@ -114,4 +114,12 @@ public class WidgetDueFormatTest {
         assertEquals(expected, DenyutWidgetProvider.formatDue(due, now));
         assertTrue(expected.contains("10:00"));
     }
+    @Test
+    public void narrowCountdownAndClockStaySeparateAndComplete() {
+        long now = at(2026, Calendar.NOVEMBER, 18, 16, 14);
+        assertEquals("in 1h 16m\nat 17:30", DenyutWidgetProvider.formatNarrowDue(now + 76 * 60_000L, now));
+        assertEquals("in 12m\nat 16:26", DenyutWidgetProvider.formatNarrowDue(now + 12 * 60_000L, now));
+        assertEquals("due now\nat 16:14", DenyutWidgetProvider.formatNarrowDue(now, now));
+        assertEquals("in 2d 1h\nat 17:14", DenyutWidgetProvider.formatNarrowDue(now + 49 * 3_600_000L, now));
+    }
 }
