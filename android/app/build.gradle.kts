@@ -11,8 +11,8 @@ android {
         applicationId = "com.vanipy.denyut"
         minSdk = 24
         targetSdk = 35
-        versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 7
-        versionName = (project.findProperty("versionName") as String?) ?: "0.7.1"
+        versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 8
+        versionName = (project.findProperty("versionName") as String?) ?: "0.7.2"
 
         ndk {
             // arm64-v8a only (modern mid-range phones are arm64), and CI runs the
