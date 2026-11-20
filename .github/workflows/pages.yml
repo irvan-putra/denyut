@@ -1,0 +1,28 @@
+name: pages
+on:
+  push:
+    branches: [main]
+    paths: [site/**, denyut/**, behavior.json, .github/workflows/pages.yml]
+  workflow_dispatch:
+permissions:
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy the unmodified Python core and default behavior into the site
+        run: |
+          mkdir -p site/py/denyut/skills
+          for f in __init__.py behavior.py core.py models.py; do cp denyut/$f site/py/denyut/$f; done
+          for f in __init__.py notes.py reminders.py; do cp denyut/skills/$f site/py/denyut/skills/$f; done
+          cp behavior.json LICENSE site/py/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Denyut in your browser</title>
+<style>
+:root{color-scheme:light dark;--bg:#f6f5f2;--fg:#201c18;--card:#fff;--ac:#b4472f;--mut:#6a625b;--bd:#ddd6cf}
+@media(prefers-color-scheme:dark){:root{--bg:#171412;--fg:#ece6df;--card:#211d1a;--ac:#f08a6c;--mut:#a69d94;--bd:#342e29}}
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+main{max-width:720px;margin:0 auto;padding:16px}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:12px 0}
+#log{height:46vh;min-height:220px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.m{padding:7px 10px;border-radius:10px;max-width:88%;white-space:pre-wrap;word-wrap:break-word}.me{align-self:flex-end;background:var(--ac);color:#fff}
+.bot{align-self:flex-start;background:var(--bd)}.sys{align-self:center;color:var(--mut);font-size:.85em}
+@media(prefers-color-scheme:dark){.me{color:#1a0e0a}}
+form{display:flex;gap:6px;margin-top:8px}input[type=text]{flex:1;font:inherit;padding:9px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--fg)}
+button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:9px 13px;font:inherit;cursor:pointer}@media(prefers-color-scheme:dark){button{color:#1a0e0a}}
+button.alt{background:var(--mut)}textarea{width:100%;min-height:200px;font:13px/1.4 ui-monospace,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:8px}
+.mut{color:var(--mut);font-size:.9em}a{color:var(--ac)}details summary{cursor:pointer;font-weight:600}
+</style></head><body><main>
+<h1>Denyut</h1>
+<p>Denyut is an assistant you can inspect and change: every behavior lives in plain files. This page runs Denyut's own, unmodified Python core (the same <code>core.py</code>, notes and reminders skills as the DeltaChat bot) inside your browser. It is another channel for the same assistant, with no DeltaChat account and no server.</p>
+<p class="mut">Notes and reminders are stored in this browser only. Reminders ring while this tab is open; a closed or sleeping tab will not fire them. Free-form model replies are not available here because a hosted model needs an API key that must not live in a web page; commands work. Not validated on a physical phone.</p>
+<div class="card"><div id="log" aria-live="polite"></div>
+<form id="f"><input id="t" type="text" placeholder="Type /help" autocomplete="off" disabled><button id="s" disabled>Send</button></form>
+<p id="st" class="mut">Loading the Python runtime (about 12 MB, once)...</p></div>
+<div class="card"><details><summary>behavior.json (the assistant's whole configuration)</summary>
+<p class="mut">Edit and apply: it is loaded by the same <code>load_behavior</code> code. Stored in this browser only.</p>
+<textarea id="b" spellcheck="false"></textarea><br>
+<button id="apply" class="alt">Apply</button> <button id="reset" class="alt">Reset to default</button> <span id="bs" class="mut"></span></details></div>
+<div class="card"><button id="exp" class="alt">Download my notes and reminders (JSON)</button> <button id="clr" class="alt">Erase notes and reminders here</button></div>
+<p class="mut"><a href="https://github.com/irvan-putra/denyut">Source (MIT)</a> · <a href="https://github.com/irvan-putra/denyut/releases/tag/v0.6.4">Android app and DeltaChat bot</a> · Runtime: <a href="pyodide/LICENSE-pyodide-MPL-2.0.txt">Pyodide (MPL-2.0)</a></p>
+<script src="pyodide/pyodide.js"></script><script src="app.js"></script></main></body></html>
