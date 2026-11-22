@@ -83,3 +83,4 @@ Denyut's own code is MIT (see LICENSE). The bundled DeltaChat core stays MPL-2.0
 - [Denyut hosting cost estimate](docs/research/hosting-cost-estimate.md) - bounded single-user hosting prices, dated sources, and open tax/traffic/performance questions; no rental made.
 - [Gemma and AI Studio hosted-access supplement](docs/research/gemma-hosted-access-supplement.md) - current API, subscription-credit and privacy constraints; no account, billing, model download or integration tested.
 - [Local Gemma bridge checkpoint](docs/research/local-gemma-bridge-checkpoint.md) - preparatory code/build evidence, independent review findings and remaining activation gates; no weights or inference proven.
+- [Existing Delta Chat LLM bots and design options](docs/design-review-existing-work-and-options.md) - excerpt-based leads only (repos not read directly), four decision cards with Central Logs not proposed, and unchanged open gaps; no code, dependency, model or account change.
