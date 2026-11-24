@@ -24,6 +24,9 @@ The signed Android v0.6.4 test APK is published as a direct [GitHub release asse
   variable, never from the repo or chat.
 - `denyut/skills/notes.py` — persistent notes (/note, /notes, /done;
   archives instead of deleting)
+- `denyut/skills/memory.py` — long-term facts (/remember, /memory,
+  /forget; archived, sent to the model as context) and an optional,
+  off-by-default daily journal searched with /recall
 - `denyut/skills/reminders.py` — time-based reminders (/remind 45m ...;
   fires even when nobody is chatting, via a timer in the adapter)
 - `denyut/deltachat_bot.py` — DeltaChat adapter (only DeltaChat-specific
@@ -45,7 +48,8 @@ Requires Python >= 3.11 (deltachat2 uses enum.StrEnum).
     python -m denyut.deltachat_bot serve
 
 Open the invite link in DeltaChat and chat. Commands: /help, /note,
-/notes, /done, /remind, /reminders, /cancel, /echo. Free-form messages
+/notes, /done, /remind, /reminders, /cancel, /remember, /memory,
+/forget, /recall, /echo. Free-form messages
 need a configured model backend.
 
 ## Model options (decide before any cost)
@@ -84,6 +88,7 @@ Denyut's own code is MIT (see LICENSE). The bundled DeltaChat core stays MPL-2.0
 - [Gemma and AI Studio hosted-access supplement](docs/research/gemma-hosted-access-supplement.md) - current API, subscription-credit and privacy constraints; no account, billing, model download or integration tested.
 - [Local Gemma bridge checkpoint](docs/research/local-gemma-bridge-checkpoint.md) - preparatory code/build evidence, independent review findings and remaining activation gates; no weights or inference proven.
 - [Existing Delta Chat LLM bots and design options](docs/design-review-existing-work-and-options.md) - excerpt-based leads only (repos not read directly), four decision cards with Central Logs not proposed, and unchanged open gaps; no code, dependency, model or account change.
+- [Always-on bot patterns mapped to Denyut](docs/research/always-on-bot-patterns.md) - what a public talk's ideas (memory files, daily log, dreaming, wake-ups, permissions) mean for Denyut; offline memory commands built, dreaming and event wake-ups not built, no new account, service or cost.
 
 ---
 

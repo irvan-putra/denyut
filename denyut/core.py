@@ -15,6 +15,7 @@ import time
 
 from .behavior import load_behavior
 from .models import build_backend
+from .skills.memory import MemorySkill
 from .skills.notes import NotesSkill
 from .skills.reminders import RemindersSkill
 
@@ -26,6 +27,10 @@ HELP = """Available commands:
 /remind <delay> <text> - remind in 30, 90s, 45m, 2h or 1d
 /reminders - show pending reminders
 /cancel <n> - cancel reminder n
+/remember <fact> - keep a long-term fact
+/memory - show remembered facts
+/forget <n> - archive fact n
+/recall <word> - search the journal, if it is on
 /echo <text> - say it back
 Anything else is answered by the model, if one is configured."""
 
@@ -68,6 +73,15 @@ class Assistant:
                 skills_cfg["reminders"].get("store", "reminders.json"))
             self.reminders = RemindersSkill(store)
             self.skills.append(self.reminders)
+        self.memory = None
+        mem_cfg = skills_cfg.get("memory", {})
+        if mem_cfg.get("enabled"):
+            store = os.path.join(store_dir, mem_cfg.get("store", "memory.json"))
+            journal = None
+            if mem_cfg.get("journal"):
+                journal = os.path.join(store_dir, mem_cfg.get("journal_dir", "journal"))
+            self.memory = MemorySkill(store, journal)
+            self.skills.append(self.memory)
         self._echo_enabled = skills_cfg.get("echo", {}).get("enabled", True)
         self._history = {}
         self._pending = {}
@@ -88,6 +102,8 @@ class Assistant:
             return "Please answer yes or no. " + pending.question
 
         command, payload = parse_message(text)
+        if self.memory is not None and command is None:
+            self.memory.log(sender, text, now)
 
         if command == "/help":
             return HELP
@@ -114,7 +130,12 @@ class Assistant:
                     "set a model backend in behavior.json.")
 
         history = self._history.setdefault(sender, [])
-        reply = self.backend.complete(self.system_prompt, history, payload)
+        prompt = self.system_prompt
+        if self.memory is not None:
+            block = self.memory.context_block(sender)
+            if block:
+                prompt = prompt + "\n\n" + block
+        reply = self.backend.complete(prompt, history, payload)
         history.append({"role": "user", "content": payload})
         history.append({"role": "assistant", "content": reply})
         del history[:-20]

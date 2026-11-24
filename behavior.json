@@ -13,6 +13,7 @@
   "skills": {
     "notes": {"enabled": true, "store": "notes.json"},
     "reminders": {"enabled": true, "store": "reminders.json"},
+    "memory": {"enabled": true, "store": "memory.json", "journal": false, "journal_dir": "journal"},
     "echo": {"enabled": true}
   }
 }
