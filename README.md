@@ -78,6 +78,8 @@ Denyut's own code is MIT (see LICENSE). The bundled DeltaChat core stays MPL-2.0
 
 ## Research notes
 
+- [Mermaid diagrams inside GitHub pull requests](docs/research/github-pr-mermaid-diagrams.md) - inline diagrams, preservation of existing PR text, and the difference between authenticated readback and visual verification.
+
 - [Android emulator in GitHub Actions: documented setup facts](docs/research/android-emulator-in-github-actions-setup-facts.md) - documentation-only notes on runner acceleration and emulator setup; nothing was run for this note.
 - [AOSP iptables: how interface negation prints](docs/research/aosp-iptables-listing-format-for-firewall-checks.md) - source reading at one AOSP tag; no device test or shipped-variant claim.
 
